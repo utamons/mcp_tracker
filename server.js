@@ -3,7 +3,7 @@ import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js"
 import { z } from "zod";
 import os from "node:os";
 import path from "node:path";
-import { readdir, rm, writeFile } from "node:fs/promises";
+import { readdir, readFile, rm, writeFile } from "node:fs/promises";
 import { execFile } from "node:child_process";
 import { promisify } from "node:util";
 
@@ -246,6 +246,193 @@ async function executeTasksCreate(input) {
   };
 }
 
+function parseTaskMarkdown(content) {
+  const lines = String(content).split("\n");
+  if (lines[0] !== "---") {
+    return null;
+  }
+
+  const header = {};
+  let idx = 1;
+  for (; idx < lines.length; idx++) {
+    const line = lines[idx];
+    if (line === "---") break;
+    if (line.trim() === "") continue;
+
+    const match = line.match(/^([a-z_]+):\s*(.*)$/);
+    if (!match) return null;
+
+    header[match[1]] = match[2];
+  }
+
+  if (idx >= lines.length || lines[idx] !== "---") {
+    return null;
+  }
+
+  const id = header.id;
+  const project = header.project;
+  const type = header.type;
+  const titleRaw = header.title;
+  const status = header.status;
+  const created_at = header.created_at;
+
+  if (!id || !project || !type || !titleRaw || !status || !created_at) {
+    return null;
+  }
+
+  if (type !== "user_story" && type !== "bug") {
+    return null;
+  }
+
+  const allowedStatuses = ["backlog", "todo", "in_progress", "done", "canceled"];
+  if (!allowedStatuses.includes(status)) {
+    return null;
+  }
+
+  let title;
+  try {
+    title = JSON.parse(titleRaw);
+  } catch {
+    return null;
+  }
+
+  const body = lines.slice(idx + 1).join("\n").trimEnd();
+
+  return {
+    id,
+    project,
+    type,
+    title,
+    status,
+    created_at,
+    body: body === "" ? undefined : body,
+  };
+}
+
+async function executeTasksUpdate(input) {
+  const project = input?.project;
+  const id = input?.id;
+  const patch = input?.patch;
+
+  if (typeof project !== "string" || !isValidProjectName(project)) {
+    return {
+      ok: false,
+      error: { code: "INVALID_PROJECT_NAME", message: "Invalid project name." },
+    };
+  }
+  if (typeof id !== "string" || id.trim() === "") {
+    return {
+      ok: false,
+      error: { code: "INVALID_TASK_FORMAT", message: "Invalid task id." },
+    };
+  }
+  if (typeof patch !== "object" || patch === null) {
+    return {
+      ok: false,
+      error: { code: "INVALID_TASK_FORMAT", message: "Invalid patch format." },
+    };
+  }
+
+  const projectDir = path.join(defaultRepoRoot, project);
+  try {
+    const entries = await readdir(projectDir, { withFileTypes: true });
+    if (!entries) {
+      // unreachable, keeps flow explicit
+    }
+  } catch {
+    return {
+      ok: false,
+      error: { code: "PROJECT_NOT_FOUND", message: "Project not found." },
+    };
+  }
+
+  const taskPath = path.join(defaultRepoRoot, project, `${id}.md`);
+  let currentContent;
+  try {
+    currentContent = await readFile(taskPath, "utf8");
+  } catch {
+    return {
+      ok: false,
+      error: { code: "TASK_NOT_FOUND", message: "Task not found." },
+    };
+  }
+
+  const task = parseTaskMarkdown(currentContent);
+  if (!task || task.id !== id || task.project !== project) {
+    return {
+      ok: false,
+      error: { code: "INVALID_TASK_FORMAT", message: "Invalid task format." },
+    };
+  }
+
+  if (task.status !== "backlog") {
+    return {
+      ok: false,
+      error: {
+        code: "FORBIDDEN_UPDATE_IN_STATUS",
+        message: "Update is forbidden in this status.",
+      },
+    };
+  }
+
+  const worktreeError = await assertCleanWorktree(defaultRepoRoot);
+  if (worktreeError) {
+    return { ok: false, error: worktreeError };
+  }
+
+  const next = { ...task };
+  if (patch.type !== undefined) {
+    if (patch.type !== "user_story" && patch.type !== "bug") {
+      return {
+        ok: false,
+        error: { code: "INVALID_TASK_FORMAT", message: "Invalid task type." },
+      };
+    }
+    next.type = patch.type;
+  }
+  if (patch.title !== undefined) {
+    if (typeof patch.title !== "string" || patch.title.trim() === "") {
+      return {
+        ok: false,
+        error: { code: "INVALID_TASK_FORMAT", message: "Invalid task title." },
+      };
+    }
+    next.title = patch.title;
+  }
+  if (patch.body !== undefined) {
+    if (typeof patch.body !== "string") {
+      return {
+        ok: false,
+        error: { code: "INVALID_TASK_FORMAT", message: "Invalid task body." },
+      };
+    }
+    next.body = patch.body === "" ? undefined : patch.body;
+  }
+
+  const updatedContent = serializeTaskMarkdown(next);
+  try {
+    await writeFile(taskPath, updatedContent, "utf8");
+    await commitAll(defaultRepoRoot, `update ${id}`);
+  } catch {
+    return {
+      ok: false,
+      error: { code: "IO_ERROR", message: "Failed to update task." },
+    };
+  }
+
+  return {
+    ok: true,
+    data: {
+      id: next.id,
+      project: next.project,
+      type: next.type,
+      title: next.title,
+      status: next.status,
+      created_at: next.created_at,
+    },
+  };
+}
+
 const tools = [
   { name: "projects.list", title: "Projects list", inputSchema: emptyInputSchema },
   {
@@ -260,7 +447,23 @@ const tools = [
       })
       .strict(),
   },
-  { name: "tasks.update", title: "Tasks update" },
+  {
+    name: "tasks.update",
+    title: "Tasks update",
+    inputSchema: z
+      .object({
+        project: z.string(),
+        id: z.string(),
+        patch: z
+          .object({
+            type: z.enum(["user_story", "bug"]).optional(),
+            title: z.string().optional(),
+            body: z.string().optional(),
+          })
+          .passthrough(),
+      })
+      .strict(),
+  },
   { name: "tasks.promote_to_todo", title: "Tasks promote to todo" },
   { name: "tasks.claim", title: "Tasks claim" },
   { name: "tasks.done", title: "Tasks done" },
@@ -289,6 +492,11 @@ for (const tool of tools) {
 
       if (tool.name === "tasks.create") {
         const result = await executeTasksCreate(input);
+        return toMcpTextResult(result);
+      }
+
+      if (tool.name === "tasks.update") {
+        const result = await executeTasksUpdate(input);
         return toMcpTextResult(result);
       }
 
