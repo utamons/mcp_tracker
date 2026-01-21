@@ -20,9 +20,23 @@ export class TaskQueryService {
     _project: string,
     _filter: { status?: TaskEntity["status"]; text?: string },
   ): Promise<TaskView[]> {
-    void this._store;
-    void this._textSearch;
-    return [];
+    let tasks = await this._store.list(_project);
+
+    if (_filter.status) {
+      tasks = tasks.filter((task) => task.status === _filter.status);
+    }
+
+    if (typeof _filter.text === "string" && _filter.text.trim() !== "") {
+      tasks = tasks.filter((task) => this._textSearch.matches(task, _filter.text!));
+    }
+
+    return tasks.map((task) => ({
+      id: task.id,
+      project: task.project,
+      type: task.type,
+      title: task.title,
+      status: task.status,
+      created_at: task.created_at,
+    }));
   }
 }
-

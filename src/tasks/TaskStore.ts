@@ -1,5 +1,5 @@
 import type { Config } from "../config/Config.js";
-import { readFile, writeFile } from "node:fs/promises";
+import { readdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 
 export type TaskEntity = {
@@ -17,6 +17,10 @@ export class TaskStore {
 
   taskPath(_project: string, _id: string): string {
     return path.join(this._config.getRepoRoot(), _project, `${_id}.md`);
+  }
+
+  projectDirPath(_project: string): string {
+    return path.join(this._config.getRepoRoot(), _project);
   }
 
   async read(_project: string, _id: string): Promise<TaskEntity> {
@@ -57,8 +61,74 @@ export class TaskStore {
   }
 
   async list(_project: string): Promise<TaskEntity[]> {
-    void _project;
-    return [];
+    const projectDir = this.projectDirPath(_project);
+    let entries;
+    try {
+      entries = await readdir(projectDir, { withFileTypes: true });
+    } catch (error) {
+      const code =
+        error instanceof Error
+          ? (error as unknown as { code?: string }).code
+          : undefined;
+
+      if (code === "ENOENT") {
+        const notFound = new Error("Project not found.");
+        (notFound as unknown as { code: string }).code = "PROJECT_NOT_FOUND";
+        throw notFound;
+      }
+
+      const io = new Error("Failed to list tasks.");
+      (io as unknown as { code: string }).code = "IO_ERROR";
+      throw io;
+    }
+
+    const files = entries
+      .filter((entry) => entry.isFile() && entry.name.endsWith(".md"))
+      .map((entry) => entry.name)
+      .sort((left, right) => left.localeCompare(right));
+
+    const tasks: TaskEntity[] = [];
+    for (const fileName of files) {
+      const expectedId = fileName.slice(0, -".md".length);
+      const filePath = path.join(projectDir, fileName);
+
+      let content: string;
+      try {
+        content = await readFile(filePath, "utf8");
+      } catch {
+        const io = new Error("Failed to read task.");
+        (io as unknown as { code: string }).code = "IO_ERROR";
+        throw io;
+      }
+
+      let task: TaskEntity;
+      try {
+        task = parseTask(content);
+      } catch (error) {
+        const code =
+          error instanceof Error
+            ? (error as unknown as { code?: string }).code
+            : undefined;
+
+        if (code === "INVALID_TASK_FORMAT") {
+          throw error;
+        }
+
+        const invalid = new Error("Invalid task format.");
+        (invalid as unknown as { code: string }).code = "INVALID_TASK_FORMAT";
+        throw invalid;
+      }
+
+      if (task.project !== _project || task.id !== expectedId) {
+        const invalid = new Error("Invalid task format.");
+        (invalid as unknown as { code: string }).code = "INVALID_TASK_FORMAT";
+        throw invalid;
+      }
+
+      tasks.push(task);
+    }
+
+    return tasks;
   }
 }
 

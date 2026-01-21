@@ -309,6 +309,98 @@ function parseTaskMarkdown(content) {
   };
 }
 
+function taskMatchesText(task, text) {
+  const query = String(text ?? "").trim();
+  if (query === "") return true;
+
+  const needle = query.toLowerCase();
+  const title = String(task.title ?? "").toLowerCase();
+  const body = String(task.body ?? "").toLowerCase();
+  return title.includes(needle) || body.includes(needle);
+}
+
+async function executeTasksList(input) {
+  const project = input?.project;
+  const status = input?.status;
+  const text = input?.text;
+
+  if (typeof project !== "string" || !isValidProjectName(project)) {
+    return {
+      ok: false,
+      error: { code: "INVALID_PROJECT_NAME", message: "Invalid project name." },
+    };
+  }
+
+  const projectDir = path.join(defaultRepoRoot, project);
+  let entries;
+  try {
+    entries = await readdir(projectDir, { withFileTypes: true });
+  } catch {
+    return {
+      ok: false,
+      error: { code: "PROJECT_NOT_FOUND", message: "Project not found." },
+    };
+  }
+
+  const allowedStatuses = ["backlog", "todo", "in_progress", "done", "canceled"];
+  if (typeof status !== "undefined" && !allowedStatuses.includes(status)) {
+    return {
+      ok: false,
+      error: { code: "INVALID_TASK_FORMAT", message: "Invalid task status." },
+    };
+  }
+
+  if (typeof text !== "undefined" && typeof text !== "string") {
+    return {
+      ok: false,
+      error: { code: "INVALID_TASK_FORMAT", message: "Invalid text filter." },
+    };
+  }
+
+  const tasks = [];
+  const files = entries
+    .filter((entry) => entry.isFile() && entry.name.endsWith(".md"))
+    .map((entry) => entry.name)
+    .sort((left, right) => left.localeCompare(right));
+
+  for (const fileName of files) {
+    const expectedId = fileName.slice(0, -".md".length);
+    const taskPath = path.join(projectDir, fileName);
+
+    let content;
+    try {
+      content = await readFile(taskPath, "utf8");
+    } catch {
+      return {
+        ok: false,
+        error: { code: "IO_ERROR", message: "Failed to read task." },
+      };
+    }
+
+    const task = parseTaskMarkdown(content);
+    if (!task || task.project !== project || task.id !== expectedId) {
+      return {
+        ok: false,
+        error: { code: "INVALID_TASK_FORMAT", message: "Invalid task format." },
+      };
+    }
+
+    if (status && task.status !== status) continue;
+    if (!taskMatchesText(task, text)) continue;
+
+    tasks.push({
+      id: task.id,
+      project: task.project,
+      type: task.type,
+      title: task.title,
+      status: task.status,
+      created_at: task.created_at,
+    });
+  }
+
+  return { ok: true, data: { tasks } };
+}
+
 async function executeTasksUpdate(input) {
   const project = input?.project;
   const id = input?.id;
@@ -559,7 +651,19 @@ const tools = [
   { name: "tasks.done", title: "Tasks done" },
   { name: "tasks.release", title: "Tasks release" },
   { name: "tasks.cancel", title: "Tasks cancel" },
-  { name: "tasks.list", title: "Tasks list" },
+  {
+    name: "tasks.list",
+    title: "Tasks list",
+    inputSchema: z
+      .object({
+        project: z.string(),
+        status: z
+          .enum(["backlog", "todo", "in_progress", "done", "canceled"])
+          .optional(),
+        text: z.string().optional(),
+      })
+      .strict(),
+  },
   { name: "tasks.report", title: "Tasks report" },
   { name: "tasks.history", title: "Tasks history" },
   { name: "tasks.rollback", title: "Tasks rollback" },
@@ -592,6 +696,11 @@ for (const tool of tools) {
 
       if (tool.name === "tasks.promote_to_todo") {
         const result = await executeTasksPromoteToTodo(input);
+        return toMcpTextResult(result);
+      }
+
+      if (tool.name === "tasks.list") {
+        const result = await executeTasksList(input);
         return toMcpTextResult(result);
       }
 
