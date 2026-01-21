@@ -14,7 +14,7 @@ export class ProjectsListTool {
     } catch {
       return {
         ok: false,
-        error: { code: "IO_ERROR", message: "Failed to read tasks root." },
+        error: { code: "IO_ERROR", message: "Failed to read repo root." },
       };
     }
   }

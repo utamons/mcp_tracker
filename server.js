@@ -35,18 +35,18 @@ function toMcpTextResult(payload) {
 }
 
 const defaultRepoRoot = path.join(os.homedir(), ".mcp_tracker", "projects");
-const defaultTasksRoot = path.join(defaultRepoRoot, "tasks");
 
 function isValidProjectName(name) {
   return /^[a-z0-9-]+$/.test(name);
 }
 
-async function listProjects(tasksRoot) {
-  const entries = await readdir(tasksRoot, { withFileTypes: true });
+async function listProjects(repoRoot) {
+  const entries = await readdir(repoRoot, { withFileTypes: true });
   const projects = [];
 
   for (const entry of entries) {
     if (!entry.isDirectory()) continue;
+    if (entry.name === "tasks") continue;
 
     if (isValidProjectName(entry.name)) {
       projects.push(entry.name);
@@ -62,12 +62,12 @@ async function listProjects(tasksRoot) {
 
 async function executeProjectsList() {
   try {
-    const projects = await listProjects(defaultTasksRoot);
+    const projects = await listProjects(defaultRepoRoot);
     return { ok: true, data: { projects } };
   } catch {
     return {
       ok: false,
-      error: { code: "IO_ERROR", message: "Failed to read tasks root." },
+      error: { code: "IO_ERROR", message: "Failed to read repo root." },
     };
   }
 }

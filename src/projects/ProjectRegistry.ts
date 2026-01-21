@@ -13,12 +13,13 @@ export class ProjectRegistry {
   }
 
   async list(): Promise<string[]> {
-    const tasksRoot = this._config.getTasksRoot();
-    const entries = await readdir(tasksRoot, { withFileTypes: true });
+    const repoRoot = this._config.getRepoRoot();
+    const entries = await readdir(repoRoot, { withFileTypes: true });
 
     const projects: string[] = [];
     for (const entry of entries) {
       if (!entry.isDirectory()) continue;
+      if (entry.name === "tasks") continue;
 
       if (this.isValidName(entry.name)) {
         projects.push(entry.name);
