@@ -322,6 +322,7 @@ function taskMatchesText(task, text) {
 async function executeTasksList(input) {
   const project = input?.project;
   const status = input?.status;
+  const type = input?.type;
   const text = input?.text;
 
   if (typeof project !== "string" || !isValidProjectName(project)) {
@@ -347,6 +348,14 @@ async function executeTasksList(input) {
     return {
       ok: false,
       error: { code: "INVALID_TASK_FORMAT", message: "Invalid task status." },
+    };
+  }
+
+  const allowedTypes = ["user_story", "bug"];
+  if (typeof type !== "undefined" && !allowedTypes.includes(type)) {
+    return {
+      ok: false,
+      error: { code: "INVALID_TASK_FORMAT", message: "Invalid task type." },
     };
   }
 
@@ -386,6 +395,7 @@ async function executeTasksList(input) {
     }
 
     if (status && task.status !== status) continue;
+    if (type && task.type !== type) continue;
     if (!taskMatchesText(task, text)) continue;
 
     tasks.push({
@@ -660,6 +670,7 @@ const tools = [
         status: z
           .enum(["backlog", "todo", "in_progress", "done", "canceled"])
           .optional(),
+        type: z.enum(["user_story", "bug"]).optional(),
         text: z.string().optional(),
       })
       .strict(),

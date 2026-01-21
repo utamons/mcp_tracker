@@ -3,6 +3,7 @@ import type { TaskQueryService, TaskView } from "../../tasks/TaskQueryService.js
 export type TasksListInput = {
   project: string;
   status?: "backlog" | "todo" | "in_progress" | "done" | "canceled";
+  type?: "user_story" | "bug";
   text?: string;
 };
 
@@ -28,6 +29,13 @@ export class TasksListTool {
       };
     }
 
+    if (_input.type && !isValidType(_input.type)) {
+      return {
+        ok: false,
+        error: { code: "INVALID_TASK_FORMAT", message: "Invalid task type." },
+      };
+    }
+
     if (typeof _input.text !== "undefined" && typeof _input.text !== "string") {
       return {
         ok: false,
@@ -38,6 +46,7 @@ export class TasksListTool {
     try {
       const tasks = await this._query.list(_input.project, {
         status: _input.status,
+        type: _input.type,
         text: _input.text,
       });
       return { ok: true, data: { tasks } };
@@ -79,4 +88,10 @@ function isValidStatus(
     status === "done" ||
     status === "canceled"
   );
+}
+
+function isValidType(
+  type: TasksListInput["type"],
+): type is NonNullable<TasksListInput["type"]> {
+  return type === "user_story" || type === "bug";
 }

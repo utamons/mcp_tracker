@@ -18,12 +18,16 @@ export class TaskQueryService {
 
   async list(
     _project: string,
-    _filter: { status?: TaskEntity["status"]; text?: string },
+    _filter: { status?: TaskEntity["status"]; type?: TaskEntity["type"]; text?: string },
   ): Promise<TaskView[]> {
     let tasks = await this._store.list(_project);
 
     if (_filter.status) {
       tasks = tasks.filter((task) => task.status === _filter.status);
+    }
+
+    if (_filter.type) {
+      tasks = tasks.filter((task) => task.type === _filter.type);
     }
 
     if (typeof _filter.text === "string" && _filter.text.trim() !== "") {
