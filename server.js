@@ -1,5 +1,6 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
+import { z } from "zod";
 import os from "node:os";
 import path from "node:path";
 import { readdir, rm, writeFile } from "node:fs/promises";
@@ -12,6 +13,8 @@ const server = new McpServer({
   name: "mcp-tracker",
   version: "0.1.0",
 });
+
+const emptyInputSchema = z.object({}).strict();
 
 function notImplementedResult() {
   return {
@@ -244,21 +247,18 @@ async function executeTasksCreate(input) {
 }
 
 const tools = [
-  { name: "projects.list", title: "Projects list", inputSchema: {} },
+  { name: "projects.list", title: "Projects list", inputSchema: emptyInputSchema },
   {
     name: "tasks.create",
     title: "Tasks create",
-    inputSchema: {
-      type: "object",
-      properties: {
-        project: { type: "string" },
-        type: { type: "string", enum: ["user_story", "bug"] },
-        title: { type: "string" },
-        body: { type: "string" },
-      },
-      required: ["project", "type", "title"],
-      additionalProperties: false,
-    },
+    inputSchema: z
+      .object({
+        project: z.string(),
+        type: z.enum(["user_story", "bug"]),
+        title: z.string(),
+        body: z.string().optional(),
+      })
+      .strict(),
   },
   { name: "tasks.update", title: "Tasks update" },
   { name: "tasks.promote_to_todo", title: "Tasks promote to todo" },
@@ -279,7 +279,7 @@ for (const tool of tools) {
     {
       title: tool.title,
       description: "MCP Task Tracker tool.",
-      inputSchema: tool.inputSchema ?? {},
+      inputSchema: tool.inputSchema ?? emptyInputSchema,
     },
     async (input) => {
       if (tool.name === "projects.list") {
