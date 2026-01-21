@@ -8,6 +8,8 @@ export class ToolRegistry {
   }
 
   list(): ToolDefinition[] {
-    return [];
+    return [...this.tools].sort((left, right) =>
+      left.name.localeCompare(right.name),
+    );
   }
 }

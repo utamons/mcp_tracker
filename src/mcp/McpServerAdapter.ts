@@ -13,7 +13,25 @@ export class McpServerAdapter {
   }
 
   registerTools(registry: ToolRegistry): void {
-    void registry;
+    const toolNames = [
+      "projects.list",
+      "tasks.create",
+      "tasks.update",
+      "tasks.promote_to_todo",
+      "tasks.claim",
+      "tasks.done",
+      "tasks.release",
+      "tasks.cancel",
+      "tasks.list",
+      "tasks.report",
+      "tasks.history",
+      "tasks.rollback",
+      "tasks.verify",
+    ];
+
+    for (const name of toolNames) {
+      registry.register({ name });
+    }
   }
 
   async handleToolsList(): Promise<ToolsListResponse> {

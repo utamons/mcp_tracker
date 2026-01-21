@@ -9,6 +9,16 @@ export class ToolsListTool {
   constructor(private readonly registry: ToolRegistry) {}
 
   async execute(): Promise<ToolsListResponse> {
-    return { ok: true, data: [] };
+    try {
+      return { ok: true, data: this.registry.list() };
+    } catch {
+      return {
+        ok: false,
+        error: {
+          code: "TOOLS_LIST_FAILED",
+          message: "Failed to list tools.",
+        },
+      };
+    }
   }
 }
