@@ -55,6 +55,11 @@ export class TaskStore {
     const content = serializeTask(_task);
     await writeFile(this.taskPath(_task.project, _task.id), content, "utf8");
   }
+
+  async list(_project: string): Promise<TaskEntity[]> {
+    void _project;
+    return [];
+  }
 }
 
 function yamlString(value: string): string {
