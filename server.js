@@ -1085,6 +1085,458 @@ async function executeTasksCancel(input) {
   };
 }
 
+const ISO_WITH_OFFSET_REGEX =
+  /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?[+-]\d{2}:\d{2}$/;
+
+function parseIsoWithOffsetMs(iso) {
+  if (typeof iso !== "string" || !ISO_WITH_OFFSET_REGEX.test(iso)) return null;
+  const ms = Date.parse(iso);
+  if (!Number.isFinite(ms)) return null;
+  return ms;
+}
+
+function validateTaskForRead(task, fileNameId) {
+  const violations = [];
+
+  if (typeof fileNameId === "string" && fileNameId !== "" && task.id !== fileNameId) {
+    violations.push({
+      code: "FILE_NAME_MISMATCH",
+      message: "File name does not match task id.",
+      details: { file_id: fileNameId, task_id: task.id },
+    });
+  }
+
+  const createdMs = parseIsoWithOffsetMs(task.created_at);
+  if (createdMs === null) {
+    violations.push({
+      code: "INVALID_TIMESTAMP",
+      message: "Invalid timestamp.",
+      details: { field: "created_at", value: task.created_at },
+    });
+  }
+
+  for (const field of ["started_at", "done_at", "canceled_at"]) {
+    if (typeof task[field] === "undefined") continue;
+    const ms = parseIsoWithOffsetMs(task[field]);
+    if (ms === null) {
+      violations.push({
+        code: "INVALID_TIMESTAMP",
+        message: "Invalid timestamp.",
+        details: { field, value: task[field] },
+      });
+    }
+  }
+
+  if (task.status === "backlog" || task.status === "todo") {
+    for (const field of ["started_at", "done_at", "canceled_at", "tool"]) {
+      if (typeof task[field] === "undefined") continue;
+      violations.push({
+        code: "FORBIDDEN_FIELD",
+        message: "Forbidden field for this status.",
+        details: { status: task.status, field },
+      });
+    }
+  }
+
+  if (task.status === "in_progress") {
+    if (typeof task.started_at !== "string" || task.started_at.trim() === "") {
+      violations.push({
+        code: "MISSING_REQUIRED_FIELD",
+        message: "Missing required field for this status.",
+        details: { status: task.status, field: "started_at" },
+      });
+    }
+    for (const field of ["done_at", "canceled_at"]) {
+      if (typeof task[field] === "undefined") continue;
+      violations.push({
+        code: "FORBIDDEN_FIELD",
+        message: "Forbidden field for this status.",
+        details: { status: task.status, field },
+      });
+    }
+  }
+
+  if (task.status === "done") {
+    if (typeof task.done_at !== "string" || task.done_at.trim() === "") {
+      violations.push({
+        code: "MISSING_REQUIRED_FIELD",
+        message: "Missing required field for this status.",
+        details: { status: task.status, field: "done_at" },
+      });
+    }
+    if (typeof task.canceled_at !== "undefined") {
+      violations.push({
+        code: "FORBIDDEN_FIELD",
+        message: "Forbidden field for this status.",
+        details: { status: task.status, field: "canceled_at" },
+      });
+    }
+  }
+
+  if (task.status === "canceled") {
+    if (typeof task.canceled_at !== "string" || task.canceled_at.trim() === "") {
+      violations.push({
+        code: "MISSING_REQUIRED_FIELD",
+        message: "Missing required field for this status.",
+        details: { status: task.status, field: "canceled_at" },
+      });
+    }
+    if (typeof task.done_at !== "undefined") {
+      violations.push({
+        code: "FORBIDDEN_FIELD",
+        message: "Forbidden field for this status.",
+        details: { status: task.status, field: "done_at" },
+      });
+    }
+  }
+
+  return violations;
+}
+
+function taskDetailsView(task) {
+  const view = {
+    id: task.id,
+    project: task.project,
+    type: task.type,
+    title: task.title,
+    status: task.status,
+    created_at: task.created_at,
+  };
+
+  if (typeof task.started_at === "string") view.started_at = task.started_at;
+  if (typeof task.done_at === "string") view.done_at = task.done_at;
+  if (typeof task.canceled_at === "string") view.canceled_at = task.canceled_at;
+  if (typeof task.tool === "string") view.tool = task.tool;
+  if (typeof task.body === "string") view.body = task.body;
+
+  return view;
+}
+
+async function executeTasksGet(input) {
+  const project = input?.project;
+  const id = input?.id;
+
+  if (typeof project !== "string" || !isValidProjectName(project)) {
+    return {
+      ok: false,
+      error: { code: "INVALID_PROJECT_NAME", message: "Invalid project name." },
+    };
+  }
+  if (typeof id !== "string" || id.trim() === "") {
+    return { ok: false, error: { code: "INVALID_TASK_FORMAT", message: "Invalid task id." } };
+  }
+
+  const projectDir = path.join(defaultRepoRoot, project);
+  try {
+    await readdir(projectDir);
+  } catch {
+    return { ok: false, error: { code: "PROJECT_NOT_FOUND", message: "Project not found." } };
+  }
+
+  const filePath = path.join(projectDir, `${id}.md`);
+  let content;
+  try {
+    content = await readFile(filePath, "utf8");
+  } catch {
+    return { ok: false, error: { code: "TASK_NOT_FOUND", message: "Task not found." } };
+  }
+
+  const task = parseTaskMarkdown(content);
+  if (!task || task.project !== project || task.id !== id) {
+    return { ok: false, error: { code: "INVALID_TASK_FORMAT", message: "Invalid task format." } };
+  }
+
+  const violations = validateTaskForRead(task, id);
+  if (violations.length > 0) {
+    return { ok: false, error: { code: "INVALID_TASK_FORMAT", message: "Invalid task format." } };
+  }
+
+  return { ok: true, data: taskDetailsView(task) };
+}
+
+async function executeTasksReport(input) {
+  const project = input?.project;
+  const fromIso = input?.from;
+  const toIso = input?.to;
+
+  if (typeof project !== "string" || !isValidProjectName(project)) {
+    return {
+      ok: false,
+      error: { code: "INVALID_PROJECT_NAME", message: "Invalid project name." },
+    };
+  }
+
+  const fromMs = parseIsoWithOffsetMs(fromIso);
+  const toMs = parseIsoWithOffsetMs(toIso);
+  if (fromMs === null || toMs === null || fromMs > toMs) {
+    return { ok: false, error: { code: "INVALID_TASK_FORMAT", message: "Invalid time range." } };
+  }
+
+  const projectDir = path.join(defaultRepoRoot, project);
+  let entries;
+  try {
+    entries = await readdir(projectDir, { withFileTypes: true });
+  } catch {
+    return { ok: false, error: { code: "PROJECT_NOT_FOUND", message: "Project not found." } };
+  }
+
+  const files = entries
+    .filter((e) => e.isFile() && e.name.endsWith(".md"))
+    .map((e) => e.name)
+    .sort((a, b) => a.localeCompare(b));
+
+  let done_count = 0;
+  let remaining_count = 0;
+
+  for (const file of files) {
+    const filePath = path.join(projectDir, file);
+    let content;
+    try {
+      content = await readFile(filePath, "utf8");
+    } catch {
+      return { ok: false, error: { code: "IO_ERROR", message: "Failed to read task." } };
+    }
+
+    const task = parseTaskMarkdown(content);
+    if (!task) {
+      return { ok: false, error: { code: "INVALID_TASK_FORMAT", message: "Invalid task format." } };
+    }
+
+    if (task.status === "done") {
+      const doneMs = parseIsoWithOffsetMs(task.done_at);
+      if (doneMs === null) {
+        return {
+          ok: false,
+          error: { code: "INVALID_TASK_FORMAT", message: "Invalid task format." },
+        };
+      }
+      if (doneMs >= fromMs && doneMs <= toMs) done_count += 1;
+      continue;
+    }
+
+    if (task.status !== "canceled") {
+      remaining_count += 1;
+    }
+  }
+
+  return { ok: true, data: { done_count, remaining_count } };
+}
+
+async function gitLogForFile(filePath) {
+  const rel = path.relative(defaultRepoRoot, filePath);
+  const { stdout } = await execFileAsync(
+    "git",
+    ["log", "--date=iso-strict", "--pretty=format:%H%x1f%an%x1f%ad%x1f%s", "--", rel],
+    { cwd: defaultRepoRoot },
+  );
+
+  const out = stdout.toString().trim();
+  if (out === "") return [];
+
+  return out.split("\n").map((line) => {
+    const [hash, author, date, subject] = line.split("\x1f");
+    return { hash, author, date, subject };
+  });
+}
+
+async function executeTasksHistory(input) {
+  const project = input?.project;
+  const id = input?.id;
+
+  if (typeof project !== "string" || !isValidProjectName(project)) {
+    return {
+      ok: false,
+      error: { code: "INVALID_PROJECT_NAME", message: "Invalid project name." },
+    };
+  }
+  if (typeof id !== "string" || id.trim() === "") {
+    return { ok: false, error: { code: "INVALID_TASK_FORMAT", message: "Invalid task id." } };
+  }
+
+  const projectDir = path.join(defaultRepoRoot, project);
+  try {
+    await readdir(projectDir);
+  } catch {
+    return { ok: false, error: { code: "PROJECT_NOT_FOUND", message: "Project not found." } };
+  }
+
+  const filePath = path.join(projectDir, `${id}.md`);
+  try {
+    await readFile(filePath, "utf8");
+  } catch {
+    return { ok: false, error: { code: "TASK_NOT_FOUND", message: "Task not found." } };
+  }
+
+  try {
+    const commits = await gitLogForFile(filePath);
+    return { ok: true, data: { commits } };
+  } catch {
+    return {
+      ok: false,
+      error: { code: "GIT_OPERATION_FAILED", message: "Git operation failed." },
+    };
+  }
+}
+
+async function executeTasksRollback(input) {
+  const project = input?.project;
+  const id = input?.id;
+  const revision = input?.revision;
+
+  if (typeof project !== "string" || !isValidProjectName(project)) {
+    return {
+      ok: false,
+      error: { code: "INVALID_PROJECT_NAME", message: "Invalid project name." },
+    };
+  }
+  if (typeof id !== "string" || id.trim() === "") {
+    return { ok: false, error: { code: "INVALID_TASK_FORMAT", message: "Invalid task id." } };
+  }
+  if (typeof revision !== "string" || revision.trim() === "") {
+    return { ok: false, error: { code: "INVALID_TASK_FORMAT", message: "Invalid revision." } };
+  }
+
+  const projectDir = path.join(defaultRepoRoot, project);
+  try {
+    await readdir(projectDir);
+  } catch {
+    return { ok: false, error: { code: "PROJECT_NOT_FOUND", message: "Project not found." } };
+  }
+
+  const filePath = path.join(projectDir, `${id}.md`);
+  try {
+    await readFile(filePath, "utf8");
+  } catch {
+    return { ok: false, error: { code: "TASK_NOT_FOUND", message: "Task not found." } };
+  }
+
+  const worktreeError = await assertCleanWorktree(defaultRepoRoot);
+  if (worktreeError) {
+    return { ok: false, error: worktreeError };
+  }
+
+  const rel = path.relative(defaultRepoRoot, filePath);
+  try {
+    await execFileAsync(
+      "git",
+      ["restore", "--source", revision, "--staged", "--worktree", "--", rel],
+      { cwd: defaultRepoRoot },
+    );
+    await commitAll(defaultRepoRoot, `rollback ${id} to ${revision}`);
+  } catch {
+    try {
+      await execFileAsync(
+        "git",
+        ["restore", "--source", "HEAD", "--staged", "--worktree", "--", rel],
+        { cwd: defaultRepoRoot },
+      );
+    } catch {
+      // ignore
+    }
+
+    return {
+      ok: false,
+      error: { code: "GIT_OPERATION_FAILED", message: "Git operation failed." },
+    };
+  }
+
+  let content;
+  try {
+    content = await readFile(filePath, "utf8");
+  } catch {
+    return { ok: false, error: { code: "IO_ERROR", message: "Failed to read task." } };
+  }
+
+  const task = parseTaskMarkdown(content);
+  if (!task || task.project !== project || task.id !== id) {
+    return { ok: false, error: { code: "INVALID_TASK_FORMAT", message: "Invalid task format." } };
+  }
+
+  const violations = validateTaskForRead(task, id);
+  if (violations.length > 0) {
+    return { ok: false, error: { code: "INVALID_TASK_FORMAT", message: "Invalid task format." } };
+  }
+
+  const view = taskDetailsView(task);
+  delete view.body;
+  return { ok: true, data: view };
+}
+
+async function executeTasksVerify(input) {
+  const project = input?.project;
+  if (typeof project !== "string" || project.trim() === "") {
+    return { ok: false, error: { code: "INVALID_TASK_FORMAT", message: "Invalid project." } };
+  }
+
+  const violations = [];
+  if (!isValidProjectName(project)) {
+    violations.push({
+      code: "INVALID_PROJECT_NAME",
+      message: "Invalid project name.",
+      details: { project },
+    });
+  }
+
+  const projectDir = path.join(defaultRepoRoot, project);
+  let entries;
+  try {
+    entries = await readdir(projectDir, { withFileTypes: true });
+  } catch {
+    return { ok: false, error: { code: "PROJECT_NOT_FOUND", message: "Project not found." } };
+  }
+
+  const files = entries
+    .filter((e) => e.isFile() && e.name.endsWith(".md"))
+    .map((e) => e.name)
+    .sort((a, b) => a.localeCompare(b));
+
+  const ids = [];
+  for (const file of files) {
+    const fileNameId = file.slice(0, -".md".length);
+    const filePath = path.join(projectDir, file);
+    let content;
+    try {
+      content = await readFile(filePath, "utf8");
+    } catch {
+      return { ok: false, error: { code: "IO_ERROR", message: "Failed to read task." } };
+    }
+
+    const task = parseTaskMarkdown(content);
+    if (!task) {
+      violations.push({
+        code: "INVALID_TASK_FORMAT",
+        message: "Invalid task format.",
+        details: { file },
+      });
+      continue;
+    }
+
+    if (task.project !== project) {
+      violations.push({
+        code: "INVALID_TASK_FORMAT",
+        message: "Task project mismatch.",
+        details: { file, task_project: task.project, project },
+      });
+    }
+
+    ids.push(task.id);
+    violations.push(...validateTaskForRead(task, fileNameId));
+  }
+
+  const counts = new Map();
+  for (const id of ids) counts.set(id, (counts.get(id) ?? 0) + 1);
+  for (const [id, count] of counts.entries()) {
+    if (count <= 1) continue;
+    violations.push({
+      code: "DUPLICATE_TASK_ID",
+      message: "Duplicate task id.",
+      details: { id, count },
+    });
+  }
+
+  return { ok: true, data: { violations } };
+}
+
 const tools = [
   { name: "projects.list", title: "Projects list", inputSchema: emptyInputSchema },
   {
@@ -1098,6 +1550,11 @@ const tools = [
         body: z.string().optional(),
       })
       .strict(),
+  },
+  {
+    name: "tasks.get",
+    title: "Tasks get",
+    inputSchema: z.object({ project: z.string(), id: z.string() }).strict(),
   },
   {
     name: "tasks.update",
@@ -1157,10 +1614,28 @@ const tools = [
       })
       .strict(),
   },
-  { name: "tasks.report", title: "Tasks report" },
-  { name: "tasks.history", title: "Tasks history" },
-  { name: "tasks.rollback", title: "Tasks rollback" },
-  { name: "tasks.verify", title: "Tasks verify" },
+  {
+    name: "tasks.report",
+    title: "Tasks report",
+    inputSchema: z.object({ project: z.string(), from: z.string(), to: z.string() }).strict(),
+  },
+  {
+    name: "tasks.history",
+    title: "Tasks history",
+    inputSchema: z.object({ project: z.string(), id: z.string() }).strict(),
+  },
+  {
+    name: "tasks.rollback",
+    title: "Tasks rollback",
+    inputSchema: z
+      .object({ project: z.string(), id: z.string(), revision: z.string() })
+      .strict(),
+  },
+  {
+    name: "tasks.verify",
+    title: "Tasks verify",
+    inputSchema: z.object({ project: z.string() }).strict(),
+  },
 ];
 
 for (const tool of tools) {
@@ -1179,6 +1654,11 @@ for (const tool of tools) {
 
       if (tool.name === "tasks.create") {
         const result = await executeTasksCreate(input);
+        return toMcpTextResult(result);
+      }
+
+      if (tool.name === "tasks.get") {
+        const result = await executeTasksGet(input);
         return toMcpTextResult(result);
       }
 
@@ -1214,6 +1694,26 @@ for (const tool of tools) {
 
       if (tool.name === "tasks.list") {
         const result = await executeTasksList(input);
+        return toMcpTextResult(result);
+      }
+
+      if (tool.name === "tasks.report") {
+        const result = await executeTasksReport(input);
+        return toMcpTextResult(result);
+      }
+
+      if (tool.name === "tasks.history") {
+        const result = await executeTasksHistory(input);
+        return toMcpTextResult(result);
+      }
+
+      if (tool.name === "tasks.rollback") {
+        const result = await executeTasksRollback(input);
+        return toMcpTextResult(result);
+      }
+
+      if (tool.name === "tasks.verify") {
+        const result = await executeTasksVerify(input);
         return toMcpTextResult(result);
       }
 

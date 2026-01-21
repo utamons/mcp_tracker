@@ -1,5 +1,6 @@
 import type { Config } from "../config/Config.js";
 import { execFile } from "node:child_process";
+import path from "node:path";
 import { promisify } from "node:util";
 
 const execFileAsync = promisify(execFile);
@@ -22,13 +23,54 @@ export class GitPort {
   }
 
   async log(_filePath: string): Promise<GitCommit[]> {
-    void _filePath;
-    throw new Error("Not implemented");
+    const repoRoot = this._config.getRepoRoot();
+    const relPath = path.relative(repoRoot, _filePath);
+
+    try {
+      const { stdout } = await execFileAsync(
+        "git",
+        [
+          "log",
+          "--date=iso-strict",
+          "--pretty=format:%H%x1f%an%x1f%ad%x1f%s",
+          "--",
+          relPath,
+        ],
+        { cwd: repoRoot },
+      );
+
+      const out = stdout.toString().trim();
+      if (out === "") return [];
+
+      const commits: GitCommit[] = [];
+      for (const line of out.split("\n")) {
+        const [hash, author, date, subject] = line.split("\x1f");
+        if (!hash || !author || !date || typeof subject === "undefined") continue;
+        commits.push({ hash, author, date, subject });
+      }
+
+      return commits;
+    } catch {
+      const error = new Error("Git operation failed.");
+      (error as unknown as { code: string }).code = "GIT_OPERATION_FAILED";
+      throw error;
+    }
   }
 
   async restoreFileToRevision(_filePath: string, _revision: string): Promise<void> {
-    void _filePath;
-    void _revision;
-    throw new Error("Not implemented");
+    const repoRoot = this._config.getRepoRoot();
+    const relPath = path.relative(repoRoot, _filePath);
+
+    try {
+      await execFileAsync(
+        "git",
+        ["restore", "--source", _revision, "--staged", "--worktree", "--", relPath],
+        { cwd: repoRoot },
+      );
+    } catch {
+      const error = new Error("Git operation failed.");
+      (error as unknown as { code: string }).code = "GIT_OPERATION_FAILED";
+      throw error;
+    }
   }
 }

@@ -183,14 +183,73 @@ Lists tasks for a project with optional filtering.
 - `TaskView`:
   - `id`, `project`, `type`, `title`, `status`, `created_at`
 
-### Not implemented yet
+### `tasks.get`
 
-These tools are registered but currently return `NOT_IMPLEMENTED`:
+Читает одну задачу по `id` и возвращает расширенное представление (включая `body`, если оно не пустое).
 
+- Input:
+  - `project` (string): must match `^[a-z0-9-]+$` and the directory must exist
+  - `id` (string): task ID (also the filename without `.md`)
+- Output: `{ ok: true, data: TaskDetails }`
+- `TaskDetails`:
+  - `id`, `project`, `type`, `title`, `status`, `created_at`
+  - `started_at?`, `done_at?`, `canceled_at?`, `tool?`, `body?`
+
+### `tasks.report`
+
+Отчёт за период: считает `done_count` по `done_at` в диапазоне `[from, to]` (включительно) и `remaining_count` как количество задач со статусом не из `{done, canceled}`.
+
+- Input:
+  - `project` (string): must match `^[a-z0-9-]+$` and the directory must exist
+  - `from` (string): ISO-8601 timestamp with UTC offset
+  - `to` (string): ISO-8601 timestamp with UTC offset
+- Output: `{ ok: true, data: { done_count: number, remaining_count: number } }`
+
+### `tasks.history`
+
+Возвращает git-историю файла задачи в структурированном виде.
+
+- Input:
+  - `project` (string): must match `^[a-z0-9-]+$` and the directory must exist
+  - `id` (string): task ID
+- Output: `{ ok: true, data: { commits: GitCommit[] } }`
+- `GitCommit`:
+  - `hash`, `author`, `date`, `subject`
+
+### `tasks.rollback`
+
+Откатывает файл задачи к указанной ревизии Git и создаёт отдельный commit вида `rollback <ID> to <rev>`.
+
+- Input:
+  - `project` (string): must match `^[a-z0-9-]+$` and the directory must exist
+  - `id` (string): task ID
+  - `revision` (string): git revision (hash/branch/tag)
+- Output: `{ ok: true, data: TaskView }`
+
+### `tasks.verify`
+
+Проверяет целостность проекта и задач и возвращает список нарушений. Операция read-only: не модифицирует репозиторий и не создаёт git-коммиты.
+
+- Input:
+  - `project` (string): project name (can be invalid; in that case a violation is returned)
+- Output: `{ ok: true, data: { violations: Violation[] } }`
+- `Violation`:
+  - `code`, `message`, `details?`
+
+### Implemented tools
+
+The server implements all tools listed in `tools/list`, including:
+
+- `projects.list`
+- `tasks.create`
+- `tasks.get`
+- `tasks.update`
+- `tasks.promote_to_todo`
 - `tasks.claim`
 - `tasks.done`
 - `tasks.release`
 - `tasks.cancel`
+- `tasks.list`
 - `tasks.report`
 - `tasks.history`
 - `tasks.rollback`
