@@ -1,6 +1,10 @@
 import type { TaskEntity } from "./TaskStore.js";
 
 export class WorkflowRules {
+  assertTransition(_task: TaskEntity, _toStatus: TaskEntity["status"]): void {
+    throw new Error("Not implemented");
+  }
+
   assertCanUpdate(task: TaskEntity): void {
     if (task.status === "backlog") return;
 
