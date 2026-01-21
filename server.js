@@ -433,6 +433,92 @@ async function executeTasksUpdate(input) {
   };
 }
 
+async function executeTasksPromoteToTodo(input) {
+  const project = input?.project;
+  const id = input?.id;
+
+  if (typeof project !== "string" || !isValidProjectName(project)) {
+    return {
+      ok: false,
+      error: { code: "INVALID_PROJECT_NAME", message: "Invalid project name." },
+    };
+  }
+  if (typeof id !== "string" || id.trim() === "") {
+    return {
+      ok: false,
+      error: { code: "INVALID_TASK_FORMAT", message: "Invalid task id." },
+    };
+  }
+
+  const projectDir = path.join(defaultRepoRoot, project);
+  try {
+    const entries = await readdir(projectDir, { withFileTypes: true });
+    if (!entries) {
+      // unreachable, keeps flow explicit
+    }
+  } catch {
+    return {
+      ok: false,
+      error: { code: "PROJECT_NOT_FOUND", message: "Project not found." },
+    };
+  }
+
+  const taskPath = path.join(defaultRepoRoot, project, `${id}.md`);
+  let currentContent;
+  try {
+    currentContent = await readFile(taskPath, "utf8");
+  } catch {
+    return { ok: false, error: { code: "TASK_NOT_FOUND", message: "Task not found." } };
+  }
+
+  const task = parseTaskMarkdown(currentContent);
+  if (!task || task.id !== id || task.project !== project) {
+    return {
+      ok: false,
+      error: { code: "INVALID_TASK_FORMAT", message: "Invalid task format." },
+    };
+  }
+
+  if (task.status !== "backlog") {
+    return {
+      ok: false,
+      error: {
+        code: "INVALID_STATUS_TRANSITION",
+        message: "Invalid status transition.",
+      },
+    };
+  }
+
+  const worktreeError = await assertCleanWorktree(defaultRepoRoot);
+  if (worktreeError) {
+    return { ok: false, error: worktreeError };
+  }
+
+  const next = { ...task, status: "todo" };
+  const updatedContent = serializeTaskMarkdown(next);
+  try {
+    await writeFile(taskPath, updatedContent, "utf8");
+    await commitAll(defaultRepoRoot, `promote_to_todo ${id}`);
+  } catch {
+    return {
+      ok: false,
+      error: { code: "IO_ERROR", message: "Failed to promote task." },
+    };
+  }
+
+  return {
+    ok: true,
+    data: {
+      id: next.id,
+      project: next.project,
+      type: next.type,
+      title: next.title,
+      status: next.status,
+      created_at: next.created_at,
+    },
+  };
+}
+
 const tools = [
   { name: "projects.list", title: "Projects list", inputSchema: emptyInputSchema },
   {
@@ -464,7 +550,11 @@ const tools = [
       })
       .strict(),
   },
-  { name: "tasks.promote_to_todo", title: "Tasks promote to todo" },
+  {
+    name: "tasks.promote_to_todo",
+    title: "Tasks promote to todo",
+    inputSchema: z.object({ project: z.string(), id: z.string() }).strict(),
+  },
   { name: "tasks.claim", title: "Tasks claim" },
   { name: "tasks.done", title: "Tasks done" },
   { name: "tasks.release", title: "Tasks release" },
@@ -497,6 +587,11 @@ for (const tool of tools) {
 
       if (tool.name === "tasks.update") {
         const result = await executeTasksUpdate(input);
+        return toMcpTextResult(result);
+      }
+
+      if (tool.name === "tasks.promote_to_todo") {
+        const result = await executeTasksPromoteToTodo(input);
         return toMcpTextResult(result);
       }
 
