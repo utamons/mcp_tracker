@@ -1,5 +1,8 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
+import os from "node:os";
+import path from "node:path";
+import { readdir } from "node:fs/promises";
 
 const server = new McpServer({
   name: "mcp-tracker",
@@ -18,6 +21,55 @@ function notImplementedResult() {
       },
     ],
   };
+}
+
+function toMcpTextResult(payload) {
+  return {
+    content: [
+      {
+        type: "text",
+        text: JSON.stringify(payload),
+      },
+    ],
+  };
+}
+
+const defaultRepoRoot = path.join(os.homedir(), ".mcp_tracker", "projects");
+const defaultTasksRoot = path.join(defaultRepoRoot, "tasks");
+
+function isValidProjectName(name) {
+  return /^[a-z0-9-]+$/.test(name);
+}
+
+async function listProjects(tasksRoot) {
+  const entries = await readdir(tasksRoot, { withFileTypes: true });
+  const projects = [];
+
+  for (const entry of entries) {
+    if (!entry.isDirectory()) continue;
+
+    if (isValidProjectName(entry.name)) {
+      projects.push(entry.name);
+      continue;
+    }
+
+    console.warn("Ignoring invalid project name.", { name: entry.name });
+  }
+
+  projects.sort((left, right) => left.localeCompare(right));
+  return projects;
+}
+
+async function executeProjectsList() {
+  try {
+    const projects = await listProjects(defaultTasksRoot);
+    return { ok: true, data: { projects } };
+  } catch {
+    return {
+      ok: false,
+      error: { code: "IO_ERROR", message: "Failed to read tasks root." },
+    };
+  }
 }
 
 const tools = [
@@ -44,10 +96,16 @@ for (const tool of tools) {
       description: "MCP Task Tracker tool.",
       inputSchema: {},
     },
-    async () => notImplementedResult(),
+    async () => {
+      if (tool.name === "projects.list") {
+        const result = await executeProjectsList();
+        return toMcpTextResult(result);
+      }
+
+      return notImplementedResult();
+    },
   );
 }
 
 const transport = new StdioServerTransport();
 await server.connect(transport);
-
