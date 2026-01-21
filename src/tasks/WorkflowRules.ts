@@ -26,4 +26,28 @@ export class WorkflowRules {
     (error as unknown as { code: string }).code = "FORBIDDEN_UPDATE_IN_STATUS";
     throw error;
   }
+
+  assertForbiddenFields(
+    task: TaskEntity,
+    fields: Array<"started_at" | "done_at" | "canceled_at" | "tool">,
+  ): void {
+    for (const field of fields) {
+      if (typeof task[field] === "undefined") continue;
+      const error = new Error("Invalid task format.");
+      (error as unknown as { code: string }).code = "INVALID_TASK_FORMAT";
+      throw error;
+    }
+  }
+
+  assertRequiredFields(
+    task: TaskEntity,
+    fields: Array<"started_at" | "done_at" | "canceled_at">,
+  ): void {
+    for (const field of fields) {
+      if (typeof task[field] === "string" && task[field] !== "") continue;
+      const error = new Error("Invalid task format.");
+      (error as unknown as { code: string }).code = "INVALID_TASK_FORMAT";
+      throw error;
+    }
+  }
 }

@@ -115,7 +115,21 @@ async function nextTaskId(repoRoot, project) {
   return `${prefix}-${String(next).padStart(3, "0")}`;
 }
 
-function serializeTaskMarkdown({ id, project, type, title, status, created_at, body }) {
+function serializeTaskMarkdown(task) {
+  const {
+    id,
+    project,
+    type,
+    title,
+    status,
+    created_at,
+    started_at,
+    done_at,
+    canceled_at,
+    tool,
+    body,
+  } = task;
+
   const safeTitle = JSON.stringify(String(title));
   const lines = [
     "---",
@@ -125,8 +139,14 @@ function serializeTaskMarkdown({ id, project, type, title, status, created_at, b
     `title: ${safeTitle}`,
     `status: ${status}`,
     `created_at: ${created_at}`,
-    "---",
   ];
+
+  if (typeof started_at === "string") lines.push(`started_at: ${started_at}`);
+  if (typeof done_at === "string") lines.push(`done_at: ${done_at}`);
+  if (typeof canceled_at === "string") lines.push(`canceled_at: ${canceled_at}`);
+  if (typeof tool === "string") lines.push(`tool: ${JSON.stringify(String(tool))}`);
+
+  lines.push("---");
 
   const normalizedBody = body ? `${String(body).trimEnd()}\n` : "";
   return `${lines.join("\n")}\n${normalizedBody}`;
@@ -275,6 +295,10 @@ function parseTaskMarkdown(content) {
   const titleRaw = header.title;
   const status = header.status;
   const created_at = header.created_at;
+  const started_at = header.started_at;
+  const done_at = header.done_at;
+  const canceled_at = header.canceled_at;
+  const toolRaw = header.tool;
 
   if (!id || !project || !type || !titleRaw || !status || !created_at) {
     return null;
@@ -298,6 +322,17 @@ function parseTaskMarkdown(content) {
 
   const body = lines.slice(idx + 1).join("\n").trimEnd();
 
+  let tool;
+  if (typeof toolRaw === "string") {
+    try {
+      const parsed = JSON.parse(toolRaw);
+      if (typeof parsed !== "string") return null;
+      tool = parsed;
+    } catch {
+      return null;
+    }
+  }
+
   return {
     id,
     project,
@@ -305,6 +340,10 @@ function parseTaskMarkdown(content) {
     title,
     status,
     created_at,
+    started_at: typeof started_at === "string" ? started_at : undefined,
+    done_at: typeof done_at === "string" ? done_at : undefined,
+    canceled_at: typeof canceled_at === "string" ? canceled_at : undefined,
+    tool,
     body: body === "" ? undefined : body,
   };
 }
@@ -621,6 +660,431 @@ async function executeTasksPromoteToTodo(input) {
   };
 }
 
+async function executeTasksClaim(input) {
+  const project = input?.project;
+  const id = input?.id;
+  const tool = input?.tool;
+
+  if (typeof project !== "string" || !isValidProjectName(project)) {
+    return {
+      ok: false,
+      error: { code: "INVALID_PROJECT_NAME", message: "Invalid project name." },
+    };
+  }
+  if (typeof id !== "string" || id.trim() === "") {
+    return {
+      ok: false,
+      error: { code: "INVALID_TASK_FORMAT", message: "Invalid task id." },
+    };
+  }
+  if (typeof tool !== "undefined") {
+    if (typeof tool !== "string" || tool.trim() === "") {
+      return {
+        ok: false,
+        error: { code: "INVALID_TASK_FORMAT", message: "Invalid tool." },
+      };
+    }
+  }
+
+  const projectDir = path.join(defaultRepoRoot, project);
+  try {
+    const entries = await readdir(projectDir, { withFileTypes: true });
+    if (!entries) {
+      // unreachable
+    }
+  } catch {
+    return {
+      ok: false,
+      error: { code: "PROJECT_NOT_FOUND", message: "Project not found." },
+    };
+  }
+
+  const taskPath = path.join(defaultRepoRoot, project, `${id}.md`);
+  let currentContent;
+  try {
+    currentContent = await readFile(taskPath, "utf8");
+  } catch {
+    return { ok: false, error: { code: "TASK_NOT_FOUND", message: "Task not found." } };
+  }
+
+  const task = parseTaskMarkdown(currentContent);
+  if (!task || task.id !== id || task.project !== project) {
+    return {
+      ok: false,
+      error: { code: "INVALID_TASK_FORMAT", message: "Invalid task format." },
+    };
+  }
+  if (task.status !== "todo") {
+    return {
+      ok: false,
+      error: {
+        code: "INVALID_STATUS_TRANSITION",
+        message: "Invalid status transition.",
+      },
+    };
+  }
+
+  if (task.started_at || task.done_at || task.canceled_at || task.tool) {
+    return {
+      ok: false,
+      error: { code: "INVALID_TASK_FORMAT", message: "Invalid task format." },
+    };
+  }
+
+  const worktreeError = await assertCleanWorktree(defaultRepoRoot);
+  if (worktreeError) {
+    return { ok: false, error: worktreeError };
+  }
+
+  const started_at = nowIsoWithOffset();
+  const next = {
+    ...task,
+    status: "in_progress",
+    started_at,
+    tool: typeof tool === "string" ? tool : undefined,
+    done_at: undefined,
+    canceled_at: undefined,
+  };
+
+  const updatedContent = serializeTaskMarkdown(next);
+  try {
+    await writeFile(taskPath, updatedContent, "utf8");
+    await commitAll(defaultRepoRoot, `claim ${id}`);
+  } catch {
+    return {
+      ok: false,
+      error: { code: "IO_ERROR", message: "Failed to claim task." },
+    };
+  }
+
+  return {
+    ok: true,
+    data: {
+      id: next.id,
+      project: next.project,
+      type: next.type,
+      title: next.title,
+      status: next.status,
+      created_at: next.created_at,
+      started_at: next.started_at,
+      tool: next.tool,
+    },
+  };
+}
+
+async function executeTasksDone(input) {
+  const project = input?.project;
+  const id = input?.id;
+
+  if (typeof project !== "string" || !isValidProjectName(project)) {
+    return {
+      ok: false,
+      error: { code: "INVALID_PROJECT_NAME", message: "Invalid project name." },
+    };
+  }
+  if (typeof id !== "string" || id.trim() === "") {
+    return {
+      ok: false,
+      error: { code: "INVALID_TASK_FORMAT", message: "Invalid task id." },
+    };
+  }
+
+  const projectDir = path.join(defaultRepoRoot, project);
+  try {
+    const entries = await readdir(projectDir, { withFileTypes: true });
+    if (!entries) {
+      // unreachable
+    }
+  } catch {
+    return {
+      ok: false,
+      error: { code: "PROJECT_NOT_FOUND", message: "Project not found." },
+    };
+  }
+
+  const taskPath = path.join(defaultRepoRoot, project, `${id}.md`);
+  let currentContent;
+  try {
+    currentContent = await readFile(taskPath, "utf8");
+  } catch {
+    return { ok: false, error: { code: "TASK_NOT_FOUND", message: "Task not found." } };
+  }
+
+  const task = parseTaskMarkdown(currentContent);
+  if (!task || task.id !== id || task.project !== project) {
+    return {
+      ok: false,
+      error: { code: "INVALID_TASK_FORMAT", message: "Invalid task format." },
+    };
+  }
+  if (task.status !== "in_progress") {
+    return {
+      ok: false,
+      error: {
+        code: "INVALID_STATUS_TRANSITION",
+        message: "Invalid status transition.",
+      },
+    };
+  }
+
+  if (!task.started_at || task.done_at || task.canceled_at) {
+    return {
+      ok: false,
+      error: { code: "INVALID_TASK_FORMAT", message: "Invalid task format." },
+    };
+  }
+
+  const worktreeError = await assertCleanWorktree(defaultRepoRoot);
+  if (worktreeError) {
+    return { ok: false, error: worktreeError };
+  }
+
+  const done_at = nowIsoWithOffset();
+  const next = {
+    ...task,
+    status: "done",
+    done_at,
+    canceled_at: undefined,
+  };
+
+  const updatedContent = serializeTaskMarkdown(next);
+  try {
+    await writeFile(taskPath, updatedContent, "utf8");
+    await commitAll(defaultRepoRoot, `done ${id}`);
+  } catch {
+    return {
+      ok: false,
+      error: { code: "IO_ERROR", message: "Failed to complete task." },
+    };
+  }
+
+  return {
+    ok: true,
+    data: {
+      id: next.id,
+      project: next.project,
+      type: next.type,
+      title: next.title,
+      status: next.status,
+      created_at: next.created_at,
+      done_at: next.done_at,
+    },
+  };
+}
+
+async function executeTasksRelease(input) {
+  const project = input?.project;
+  const id = input?.id;
+
+  if (typeof project !== "string" || !isValidProjectName(project)) {
+    return {
+      ok: false,
+      error: { code: "INVALID_PROJECT_NAME", message: "Invalid project name." },
+    };
+  }
+  if (typeof id !== "string" || id.trim() === "") {
+    return {
+      ok: false,
+      error: { code: "INVALID_TASK_FORMAT", message: "Invalid task id." },
+    };
+  }
+
+  const projectDir = path.join(defaultRepoRoot, project);
+  try {
+    const entries = await readdir(projectDir, { withFileTypes: true });
+    if (!entries) {
+      // unreachable
+    }
+  } catch {
+    return {
+      ok: false,
+      error: { code: "PROJECT_NOT_FOUND", message: "Project not found." },
+    };
+  }
+
+  const taskPath = path.join(defaultRepoRoot, project, `${id}.md`);
+  let currentContent;
+  try {
+    currentContent = await readFile(taskPath, "utf8");
+  } catch {
+    return { ok: false, error: { code: "TASK_NOT_FOUND", message: "Task not found." } };
+  }
+
+  const task = parseTaskMarkdown(currentContent);
+  if (!task || task.id !== id || task.project !== project) {
+    return {
+      ok: false,
+      error: { code: "INVALID_TASK_FORMAT", message: "Invalid task format." },
+    };
+  }
+  if (task.status !== "in_progress") {
+    return {
+      ok: false,
+      error: {
+        code: "INVALID_STATUS_TRANSITION",
+        message: "Invalid status transition.",
+      },
+    };
+  }
+
+  if (!task.started_at || task.done_at || task.canceled_at) {
+    return {
+      ok: false,
+      error: { code: "INVALID_TASK_FORMAT", message: "Invalid task format." },
+    };
+  }
+
+  const worktreeError = await assertCleanWorktree(defaultRepoRoot);
+  if (worktreeError) {
+    return { ok: false, error: worktreeError };
+  }
+
+  const next = {
+    ...task,
+    status: "todo",
+    started_at: undefined,
+    tool: undefined,
+    done_at: undefined,
+    canceled_at: undefined,
+  };
+
+  const updatedContent = serializeTaskMarkdown(next);
+  try {
+    await writeFile(taskPath, updatedContent, "utf8");
+    await commitAll(defaultRepoRoot, `release ${id}`);
+  } catch {
+    return {
+      ok: false,
+      error: { code: "IO_ERROR", message: "Failed to release task." },
+    };
+  }
+
+  return {
+    ok: true,
+    data: {
+      id: next.id,
+      project: next.project,
+      type: next.type,
+      title: next.title,
+      status: next.status,
+      created_at: next.created_at,
+    },
+  };
+}
+
+async function executeTasksCancel(input) {
+  const project = input?.project;
+  const id = input?.id;
+
+  if (typeof project !== "string" || !isValidProjectName(project)) {
+    return {
+      ok: false,
+      error: { code: "INVALID_PROJECT_NAME", message: "Invalid project name." },
+    };
+  }
+  if (typeof id !== "string" || id.trim() === "") {
+    return {
+      ok: false,
+      error: { code: "INVALID_TASK_FORMAT", message: "Invalid task id." },
+    };
+  }
+
+  const projectDir = path.join(defaultRepoRoot, project);
+  try {
+    const entries = await readdir(projectDir, { withFileTypes: true });
+    if (!entries) {
+      // unreachable
+    }
+  } catch {
+    return {
+      ok: false,
+      error: { code: "PROJECT_NOT_FOUND", message: "Project not found." },
+    };
+  }
+
+  const taskPath = path.join(defaultRepoRoot, project, `${id}.md`);
+  let currentContent;
+  try {
+    currentContent = await readFile(taskPath, "utf8");
+  } catch {
+    return { ok: false, error: { code: "TASK_NOT_FOUND", message: "Task not found." } };
+  }
+
+  const task = parseTaskMarkdown(currentContent);
+  if (!task || task.id !== id || task.project !== project) {
+    return {
+      ok: false,
+      error: { code: "INVALID_TASK_FORMAT", message: "Invalid task format." },
+    };
+  }
+  if (task.status === "done" || task.status === "canceled") {
+    return {
+      ok: false,
+      error: {
+        code: "INVALID_STATUS_TRANSITION",
+        message: "Invalid status transition.",
+      },
+    };
+  }
+
+  if (task.status === "backlog" || task.status === "todo") {
+    if (task.started_at || task.done_at || task.tool || task.canceled_at) {
+      return {
+        ok: false,
+        error: { code: "INVALID_TASK_FORMAT", message: "Invalid task format." },
+      };
+    }
+  }
+
+  if (task.status === "in_progress") {
+    if (!task.started_at || task.done_at || task.canceled_at) {
+      return {
+        ok: false,
+        error: { code: "INVALID_TASK_FORMAT", message: "Invalid task format." },
+      };
+    }
+  }
+
+  const worktreeError = await assertCleanWorktree(defaultRepoRoot);
+  if (worktreeError) {
+    return { ok: false, error: worktreeError };
+  }
+
+  const canceled_at = nowIsoWithOffset();
+  const next = {
+    ...task,
+    status: "canceled",
+    canceled_at,
+    done_at: undefined,
+  };
+
+  const updatedContent = serializeTaskMarkdown(next);
+  try {
+    await writeFile(taskPath, updatedContent, "utf8");
+    await commitAll(defaultRepoRoot, `cancel ${id}`);
+  } catch {
+    return {
+      ok: false,
+      error: { code: "IO_ERROR", message: "Failed to cancel task." },
+    };
+  }
+
+  return {
+    ok: true,
+    data: {
+      id: next.id,
+      project: next.project,
+      type: next.type,
+      title: next.title,
+      status: next.status,
+      created_at: next.created_at,
+      started_at: next.started_at,
+      tool: next.tool,
+      canceled_at: next.canceled_at,
+    },
+  };
+}
+
 const tools = [
   { name: "projects.list", title: "Projects list", inputSchema: emptyInputSchema },
   {
@@ -657,10 +1121,28 @@ const tools = [
     title: "Tasks promote to todo",
     inputSchema: z.object({ project: z.string(), id: z.string() }).strict(),
   },
-  { name: "tasks.claim", title: "Tasks claim" },
-  { name: "tasks.done", title: "Tasks done" },
-  { name: "tasks.release", title: "Tasks release" },
-  { name: "tasks.cancel", title: "Tasks cancel" },
+  {
+    name: "tasks.claim",
+    title: "Tasks claim",
+    inputSchema: z
+      .object({ project: z.string(), id: z.string(), tool: z.string().optional() })
+      .strict(),
+  },
+  {
+    name: "tasks.done",
+    title: "Tasks done",
+    inputSchema: z.object({ project: z.string(), id: z.string() }).strict(),
+  },
+  {
+    name: "tasks.release",
+    title: "Tasks release",
+    inputSchema: z.object({ project: z.string(), id: z.string() }).strict(),
+  },
+  {
+    name: "tasks.cancel",
+    title: "Tasks cancel",
+    inputSchema: z.object({ project: z.string(), id: z.string() }).strict(),
+  },
   {
     name: "tasks.list",
     title: "Tasks list",
@@ -707,6 +1189,26 @@ for (const tool of tools) {
 
       if (tool.name === "tasks.promote_to_todo") {
         const result = await executeTasksPromoteToTodo(input);
+        return toMcpTextResult(result);
+      }
+
+      if (tool.name === "tasks.claim") {
+        const result = await executeTasksClaim(input);
+        return toMcpTextResult(result);
+      }
+
+      if (tool.name === "tasks.done") {
+        const result = await executeTasksDone(input);
+        return toMcpTextResult(result);
+      }
+
+      if (tool.name === "tasks.release") {
+        const result = await executeTasksRelease(input);
+        return toMcpTextResult(result);
+      }
+
+      if (tool.name === "tasks.cancel") {
+        const result = await executeTasksCancel(input);
         return toMcpTextResult(result);
       }
 

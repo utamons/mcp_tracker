@@ -9,6 +9,10 @@ export type TaskEntity = {
   title: string;
   status: "backlog" | "todo" | "in_progress" | "done" | "canceled";
   created_at: string;
+  started_at?: string;
+  done_at?: string;
+  canceled_at?: string;
+  tool?: string;
   body?: string;
 };
 
@@ -174,6 +178,10 @@ function parseTask(markdown: string): TaskEntity {
   const titleRaw = header["title"];
   const status = header["status"];
   const created_at = header["created_at"];
+  const started_at = header["started_at"];
+  const done_at = header["done_at"];
+  const canceled_at = header["canceled_at"];
+  const toolRaw = header["tool"];
 
   if (!id || !project || !type || !titleRaw || !status || !created_at) {
     const error = new Error("Invalid task format.");
@@ -211,6 +219,31 @@ function parseTask(markdown: string): TaskEntity {
 
   const body = lines.slice(index + 1).join("\n").trimEnd();
 
+  let tool: string | undefined;
+  if (typeof toolRaw === "string") {
+    try {
+      const parsed = JSON.parse(toolRaw);
+      if (typeof parsed !== "string") {
+        const error = new Error("Invalid task format.");
+        (error as unknown as { code: string }).code = "INVALID_TASK_FORMAT";
+        throw error;
+      }
+      tool = parsed;
+    } catch (error) {
+      const code =
+        error instanceof Error
+          ? (error as unknown as { code?: string }).code
+          : undefined;
+      if (code === "INVALID_TASK_FORMAT") {
+        throw error;
+      }
+
+      const invalid = new Error("Invalid task format.");
+      (invalid as unknown as { code: string }).code = "INVALID_TASK_FORMAT";
+      throw invalid;
+    }
+  }
+
   return {
     id,
     project,
@@ -218,6 +251,10 @@ function parseTask(markdown: string): TaskEntity {
     title,
     status: status as TaskEntity["status"],
     created_at,
+    started_at,
+    done_at,
+    canceled_at,
+    tool,
     body: body === "" ? undefined : body,
   };
 }
@@ -231,6 +268,10 @@ function serializeTask(task: TaskEntity): string {
   lines.push(`title: ${yamlString(task.title)}`);
   lines.push(`status: ${task.status}`);
   lines.push(`created_at: ${task.created_at}`);
+  if (task.started_at) lines.push(`started_at: ${task.started_at}`);
+  if (task.done_at) lines.push(`done_at: ${task.done_at}`);
+  if (task.canceled_at) lines.push(`canceled_at: ${task.canceled_at}`);
+  if (task.tool) lines.push(`tool: ${yamlString(task.tool)}`);
   lines.push("---");
 
   const body = task.body ? `${task.body.trimEnd()}\n` : "";
