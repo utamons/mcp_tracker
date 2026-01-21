@@ -29,10 +29,10 @@ describe("ProjectRegistry_list_filtersInvalidNames", () => {
     const tasksRoot = path.join(repoRoot, "tasks");
     await mkdir(tasksRoot, { recursive: true });
 
-    await mkdir(path.join(tasksRoot, "frontend"));
-    await mkdir(path.join(tasksRoot, "dev-ops"));
-    await mkdir(path.join(tasksRoot, "bad_name"));
-    await mkdir(path.join(tasksRoot, "Frontend"));
+    await mkdir(path.join(repoRoot, "frontend"));
+    await mkdir(path.join(repoRoot, "dev-ops"));
+    await mkdir(path.join(repoRoot, "bad_name"));
+    await mkdir(path.join(repoRoot, "Frontend"));
 
     const logger = { warn: vi.fn() } as unknown as Logger;
     const registry = new ProjectRegistry(new Config(repoRoot, tasksRoot), logger);
@@ -48,8 +48,8 @@ describe("ProjectRegistry_list_logsWarnOnInvalid", () => {
     const tasksRoot = path.join(repoRoot, "tasks");
     await mkdir(tasksRoot, { recursive: true });
 
-    await mkdir(path.join(tasksRoot, "bad_name"));
-    await mkdir(path.join(tasksRoot, "Frontend"));
+    await mkdir(path.join(repoRoot, "bad_name"));
+    await mkdir(path.join(repoRoot, "Frontend"));
 
     const logger = { warn: vi.fn() } as unknown as Logger;
     const registry = new ProjectRegistry(new Config(repoRoot, tasksRoot), logger);
@@ -97,7 +97,6 @@ describe("ProjectsListTool_ioError", () => {
     if (response.ok) return;
 
     expect(response.error.code).toBe("IO_ERROR");
-    expect(response.error.message).toBe("Failed to read tasks root.");
+    expect(response.error.message).toBe("Failed to read repo root.");
   });
 });
-
