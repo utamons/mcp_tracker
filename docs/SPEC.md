@@ -73,6 +73,7 @@
     * Done (агент): `in_progress → done`.
     * Release/Unclaim (агент): `in_progress → todo` (освободить задачу для повторного взятия).
     * Cancel: из `backlog/todo/in_progress` в `canceled`.
+    * Получение задачи по `id` (включая Markdown body).
     * Получение списка задач (по статусам, проекту).
     * Report по периоду: сколько `done` и сколько не `done`.
     * History: показать git-историю файла задачи.
@@ -129,6 +130,7 @@
     * `tasks.create(project, type, title, body?)`
     * `tasks.update(project, id, patch)` (ограничено статусом)
     * `tasks.promote_to_todo(project, id)`
+    * `tasks.get(project, id)`
     * `tasks.claim(project, id, tool?)`
     * `tasks.done(project, id)`
     * `tasks.release(project, id)`
@@ -152,6 +154,7 @@
     * `id`, `project`, `type`, `title`, `status`
     * `created_at`, `started_at?`, `done_at?`, `canceled_at?`
     * `tool?`
+* Расширенное представление задачи (для `tasks.get`): всё из минимального + `body?` (Markdown).
 * Ошибка:
 
     * `ok: false`
@@ -375,10 +378,19 @@
         * When `tasks.verify(project)`, Then возвращается список нарушений (или пусто).
         * Проверки: корректность имени проекта, уникальность id, корректность статусов/переходов, обязательные поля по статусу.
 
+* **US-15: Прочитать задачу**
+
+    * AC:
+
+        * When `tasks.get(project, id)`, Then возвращается задача (frontmatter + body) в структурированном виде.
+        * Given `project` не существует, Then ошибка `PROJECT_NOT_FOUND`.
+        * Given `id` не существует, Then ошибка `TASK_NOT_FOUND`.
+        * Given задача не соответствует формату, Then ошибка `INVALID_TASK_FORMAT`.
+
 ## Критерии приёмки модуля
 
 * `tools/list` возвращает актуальный список инструментов.
-* Можно создать задачу, отредактировать в `backlog`, перевести в `todo`, агент может `claim`, `release`, `done`, `cancel` (включая `cancel` из `in_progress`).
+* Можно прочитать задачу через `tasks.get`, создать задачу, отредактировать в `backlog`, перевести в `todo`, агент может `claim`, `release`, `done`, `cancel` (включая `cancel` из `in_progress`).
 * Запрещённые правки (не в `backlog`) отклоняются.
 * Отчёт за период корректно считает `done` по `done_at`.
 * History и rollback работают через Git и не переписывают историю.
