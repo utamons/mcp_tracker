@@ -4,7 +4,7 @@ import { ToolRegistry } from "../src/mcp/ToolRegistry.js";
 import { ToolsListTool } from "../src/mcp/tools/ToolsListTool.js";
 
 describe("ToolsListTool_returnsRegisteredTools", () => {
-  it("возвращает актуальный список зарегистрированных tools.", async () => {
+  it("returns the current list of registered tools.", async () => {
     const registry = new ToolRegistry();
     registry.register({ name: "projects.list" });
     registry.register({ name: "tasks.create" });
@@ -20,7 +20,7 @@ describe("ToolsListTool_returnsRegisteredTools", () => {
 });
 
 describe("ToolsListTool_includesProjectsAndTasks", () => {
-  it("список включает projects.list и все tasks.*.", async () => {
+  it("includes projects.list and all tasks.* tools.", async () => {
     const registry = new ToolRegistry();
     const adapter = new McpServerAdapter(registry);
     adapter.registerTools(registry);
@@ -55,7 +55,7 @@ describe("ToolsListTool_includesProjectsAndTasks", () => {
 });
 
 describe("ToolsListTool_responseShape", () => {
-  it("формат ответа соответствует ok/data и error.message на английском при ошибке.", async () => {
+  it("matches ok/data shape and uses English error.message on failure.", async () => {
     const registry = {
       list() {
         throw new Error("Ошибка чтения");
@@ -74,7 +74,7 @@ describe("ToolsListTool_responseShape", () => {
 });
 
 describe("ToolRegistry_isDeterministic", () => {
-  it("порядок/выдача списка детерминированы для воспроизводимости тестов.", () => {
+  it("returns a deterministic order for reproducible tests.", () => {
     const registry = new ToolRegistry();
     registry.register({ name: "tasks.done" });
     registry.register({ name: "projects.list" });
