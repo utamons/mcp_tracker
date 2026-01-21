@@ -5,10 +5,17 @@ export type ProjectsListResponse =
   | { ok: false; error: { code: string; message: string } };
 
 export class ProjectsListTool {
-  constructor(private readonly _registry: ProjectRegistry) {}
+  constructor(private readonly registry: ProjectRegistry) {}
 
   async execute(): Promise<ProjectsListResponse> {
-    return { ok: true, data: { projects: [] } };
+    try {
+      const projects = await this.registry.list();
+      return { ok: true, data: { projects } };
+    } catch {
+      return {
+        ok: false,
+        error: { code: "IO_ERROR", message: "Failed to read tasks root." },
+      };
+    }
   }
 }
-
