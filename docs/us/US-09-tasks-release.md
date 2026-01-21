@@ -33,9 +33,9 @@
 #### AC
 - Given `status=in_progress` и рабочее дерево Git чистое, When `tasks.release`, Then `status=todo`.
 - Then поля `started_at`, `tool` очищены и создан commit.
+- And MCP-команда `tasks.release` готова к выполнению сервером (не является заглушкой `NOT_IMPLEMENTED`).
 
 #### DoD
 - Тесты для release зелёные.
 - Очистка started_at/tool выполняется строго на успешном переходе.
 - Ошибки не меняют файл задачи и не создают commit.
-

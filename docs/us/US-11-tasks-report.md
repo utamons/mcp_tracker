@@ -34,9 +34,9 @@
 #### AC
 - Given from/to, When `tasks.report`, Then `done_count` считается по `done_at` внутри периода.
 - Then `remaining_count` = все задачи кроме `done/canceled`.
+- And MCP-команда `tasks.report` готова к выполнению сервером (не является заглушкой `NOT_IMPLEMENTED`).
 
 #### DoD
 - Тесты для report зелёные.
 - Сравнение времени выполняется по реальным моментам времени (учитывается UTC-offset).
 - Формат ответа соответствует стандартному `ok/data` контракту.
-

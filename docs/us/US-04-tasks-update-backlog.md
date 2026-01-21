@@ -41,9 +41,9 @@
 - Given `status=backlog` и рабочее дерево Git чистое, When `tasks.update`, Then разрешены изменения `type/title/body`.
 - Then операция создаёт отдельный Git commit и возвращает представление задачи.
 - Given `status≠backlog`, Then ошибка `FORBIDDEN_UPDATE_IN_STATUS`.
+- And MCP-команда `tasks.update` готова к выполнению сервером (не является заглушкой `NOT_IMPLEMENTED`).
 
 #### DoD
 - Тесты для `tasks.update` зелёные.
 - Запрещённые правки не приводят к изменениям файлов/коммитам.
 - Сообщения ошибок консистентны и на английском.
-

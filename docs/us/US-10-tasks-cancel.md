@@ -42,9 +42,9 @@
 - Given `status∈{backlog,todo}` и рабочее дерево Git чистое, When `tasks.cancel`, Then `status=canceled` и выставлен `canceled_at`.
 - Given `status=in_progress` и рабочее дерево Git чистое, When `tasks.cancel`, Then `status=canceled` и выставлен `canceled_at`.
 - Then при успехе создан отдельный Git commit.
+- And MCP-команда `tasks.cancel` готова к выполнению сервером (не является заглушкой `NOT_IMPLEMENTED`).
 
 #### DoD
 - Тесты для cancel зелёные.
 - canceled_at соответствует ISO-8601 с UTC-offset.
 - Переходы статусов соответствуют списку допустимых переходов.
-

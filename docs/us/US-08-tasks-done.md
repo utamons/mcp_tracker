@@ -36,9 +36,9 @@
 #### AC
 - Given `status=in_progress` и рабочее дерево Git чистое, When `tasks.done`, Then `status=done` и выставлен `done_at` (локальное время сервера).
 - Then создан отдельный Git commit.
+- And MCP-команда `tasks.done` готова к выполнению сервером (не является заглушкой `NOT_IMPLEMENTED`).
 
 #### DoD
 - Тесты для done зелёные.
 - done_at сохраняется в ISO-8601 с UTC-offset.
 - Коммит создаётся на каждую успешную операцию.
-
