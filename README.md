@@ -1,2 +1,2 @@
 # mcp_tracker
-Simple JIRA like MCP server for solo projects
+Simple Jira like MCP server for solo projects
