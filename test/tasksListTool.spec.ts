@@ -108,6 +108,42 @@ describe("TasksList_filterByStatus", () => {
   });
 });
 
+describe("TasksList_filterByType", () => {
+  it("с type возвращает только задачи этого типа.", async () => {
+    const repoRoot = await createTempDir();
+    await mkdir(path.join(repoRoot, "frontend"), { recursive: true });
+
+    const store = new TaskStore(new Config(repoRoot));
+    await seedTask(store, {
+      id: "FR-001",
+      type: "user_story",
+      title: "Story",
+      status: "todo",
+      created_at: "2026-01-21T10:00:00+00:00",
+      body: "Body",
+    });
+    await seedTask(store, {
+      id: "FR-002",
+      type: "bug",
+      title: "Bug",
+      status: "todo",
+      created_at: "2026-01-21T11:00:00+00:00",
+      body: "Body",
+    });
+
+    const tool = createTool(repoRoot);
+    const response = await tool.execute({
+      project: "frontend",
+      type: "bug",
+    } as any);
+
+    expect(response.ok).toBe(true);
+    if (!response.ok) return;
+
+    expect(response.data.tasks.map((t) => t.id)).toEqual(["FR-002"]);
+  });
+});
+
 describe("TasksList_textSearch_titleAndBody", () => {
   it("с text ищет по title и body.", async () => {
     const repoRoot = await createTempDir();
@@ -184,4 +220,3 @@ describe("TasksList_projectNotFound", () => {
     expect(response.error.code).toBe("PROJECT_NOT_FOUND");
   });
 });
-

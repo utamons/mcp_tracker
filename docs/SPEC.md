@@ -133,7 +133,7 @@
     * `tasks.done(project, id)`
     * `tasks.release(project, id)`
     * `tasks.cancel(project, id)`
-    * `tasks.list(project, status?, text?)`
+    * `tasks.list(project, status?, type?, text?)`
     * `tasks.report(project, from, to)`
     * `tasks.history(project, id)` (git log)
     * `tasks.rollback(project, id, revision)` (git restore/revert + commit)
@@ -315,6 +315,7 @@
 
         * When `tasks.list(project)`, Then возвращается список задач проекта.
         * When `tasks.list(project, status)`, Then возвращаются только задачи указанного статуса.
+        * When `tasks.list(project, type)`, Then возвращаются только задачи указанного типа.
         * When `tasks.list(project, text)`, Then возвращаются задачи, где `text` найден в `title` и/или body.
 
 * **US-7: Агент берёт задачу (claim)**
