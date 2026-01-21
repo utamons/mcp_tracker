@@ -26,8 +26,8 @@ afterEach(async () => {
 describe("ProjectRegistry_list_filtersInvalidNames", () => {
   it("returns only project folders that match ^[a-z0-9-]+$.", async () => {
     const repoRoot = await createTempDir();
-    const tasksRoot = path.join(repoRoot, "tasks");
-    await mkdir(tasksRoot, { recursive: true });
+    const legacyTasksDir = path.join(repoRoot, "tasks");
+    await mkdir(legacyTasksDir, { recursive: true });
 
     await mkdir(path.join(repoRoot, "frontend"));
     await mkdir(path.join(repoRoot, "dev-ops"));
@@ -35,7 +35,7 @@ describe("ProjectRegistry_list_filtersInvalidNames", () => {
     await mkdir(path.join(repoRoot, "Frontend"));
 
     const logger = { warn: vi.fn() } as unknown as Logger;
-    const registry = new ProjectRegistry(new Config(repoRoot, tasksRoot), logger);
+    const registry = new ProjectRegistry(new Config(repoRoot), logger);
 
     const projects = await registry.list();
     expect(projects).toEqual(["dev-ops", "frontend"]);
@@ -45,14 +45,14 @@ describe("ProjectRegistry_list_filtersInvalidNames", () => {
 describe("ProjectRegistry_list_logsWarnOnInvalid", () => {
   it("ignores invalid project folders and logs warn in English.", async () => {
     const repoRoot = await createTempDir();
-    const tasksRoot = path.join(repoRoot, "tasks");
-    await mkdir(tasksRoot, { recursive: true });
+    const legacyTasksDir = path.join(repoRoot, "tasks");
+    await mkdir(legacyTasksDir, { recursive: true });
 
     await mkdir(path.join(repoRoot, "bad_name"));
     await mkdir(path.join(repoRoot, "Frontend"));
 
     const logger = { warn: vi.fn() } as unknown as Logger;
-    const registry = new ProjectRegistry(new Config(repoRoot, tasksRoot), logger);
+    const registry = new ProjectRegistry(new Config(repoRoot), logger);
 
     await registry.list();
 
