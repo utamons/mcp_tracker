@@ -185,7 +185,7 @@ Lists tasks for a project with optional filtering.
 
 ### `tasks.get`
 
-Читает одну задачу по `id` и возвращает расширенное представление (включая `body`, если оно не пустое).
+Reads a single task by `id` and returns an extended representation (including `body` when it is non-empty).
 
 - Input:
   - `project` (string): must match `^[a-z0-9-]+$` and the directory must exist
@@ -197,7 +197,7 @@ Lists tasks for a project with optional filtering.
 
 ### `tasks.report`
 
-Отчёт за период: считает `done_count` по `done_at` в диапазоне `[from, to]` (включительно) и `remaining_count` как количество задач со статусом не из `{done, canceled}`.
+Time range report: counts `done_count` by `done_at` within `[from, to]` (inclusive) and `remaining_count` as the number of tasks whose status is not in `{done, canceled}`.
 
 - Input:
   - `project` (string): must match `^[a-z0-9-]+$` and the directory must exist
@@ -207,7 +207,7 @@ Lists tasks for a project with optional filtering.
 
 ### `tasks.history`
 
-Возвращает git-историю файла задачи в структурированном виде.
+Returns Git history for the task file in a structured form.
 
 - Input:
   - `project` (string): must match `^[a-z0-9-]+$` and the directory must exist
@@ -218,7 +218,7 @@ Lists tasks for a project with optional filtering.
 
 ### `tasks.rollback`
 
-Откатывает файл задачи к указанной ревизии Git и создаёт отдельный commit вида `rollback <ID> to <rev>`.
+Rolls back the task file to the specified Git revision and creates a separate commit like `rollback <ID> to <rev>`.
 
 - Input:
   - `project` (string): must match `^[a-z0-9-]+$` and the directory must exist
@@ -228,7 +228,7 @@ Lists tasks for a project with optional filtering.
 
 ### `tasks.verify`
 
-Проверяет целостность проекта и задач и возвращает список нарушений. Операция read-only: не модифицирует репозиторий и не создаёт git-коммиты.
+Checks project and tasks integrity and returns a list of violations. Read-only: does not modify the repository and does not create Git commits.
 
 - Input:
   - `project` (string): project name (can be invalid; in that case a violation is returned)
