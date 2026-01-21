@@ -28,7 +28,7 @@
 
 #### AC
 - When `tasks.history`, Then возвращается git-log для файла задачи.
-- And MCP-команда `tasks.history` готова к выполнению сервером (не является заглушкой `NOT_IMPLEMENTED`).
+- And MCP-инструмент `tasks.history` зарегистрирован в MCP-сервере (виден в `tools/list`), имеет `inputSchema` с параметрами из описания, и при вызове выполняет реальную операцию (не возвращает `error.code=NOT_IMPLEMENTED`).
 
 #### DoD
 - Тесты для history зелёные (интеграция с git в temp-репозитории).

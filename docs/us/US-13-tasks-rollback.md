@@ -33,7 +33,7 @@
 
 #### AC
 - When `tasks.rollback` to revision, Then файл восстановлен и создан новый commit.
-- And MCP-команда `tasks.rollback` готова к выполнению сервером (не является заглушкой `NOT_IMPLEMENTED`).
+- And MCP-инструмент `tasks.rollback` зарегистрирован в MCP-сервере (виден в `tools/list`), имеет `inputSchema` с параметрами из описания, и при вызове выполняет реальную операцию (не возвращает `error.code=NOT_IMPLEMENTED`).
 
 #### DoD
 - Тесты для rollback зелёные (интеграция с git).

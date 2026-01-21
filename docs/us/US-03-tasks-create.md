@@ -46,7 +46,7 @@
 - Then `id` соответствует `<PREFIX>-<NNN>`, `status=backlog`, `created_at` выставлен.
 - Then операция создаёт отдельный Git commit и возвращает представление задачи.
 - Given рабочее дерево Git не чистое, Then ошибка `GIT_DIRTY_WORKTREE`.
-- And MCP-команда `tasks.create` готова к выполнению сервером (не является заглушкой `NOT_IMPLEMENTED`).
+- And MCP-инструмент `tasks.create` зарегистрирован в MCP-сервере (виден в `tools/list`), имеет `inputSchema` с параметрами из описания, и при вызове выполняет реальную операцию (не возвращает `error.code=NOT_IMPLEMENTED`).
 
 #### DoD
 - Тесты для `tasks.create` зелёные (включая интеграционный сценарий с реальным git-репо в temp-директории).

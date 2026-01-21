@@ -36,7 +36,7 @@
 #### AC
 - Given `status=backlog` и рабочее дерево Git чистое, When `tasks.promote_to_todo`, Then `status=todo` и создан commit.
 - Given `status≠backlog`, Then ошибка `INVALID_STATUS_TRANSITION`.
-- And MCP-команда `tasks.promote_to_todo` готова к выполнению сервером (не является заглушкой `NOT_IMPLEMENTED`).
+- And MCP-инструмент `tasks.promote_to_todo` зарегистрирован в MCP-сервере (виден в `tools/list`), имеет `inputSchema` с параметрами из описания, и при вызове выполняет реальную операцию (не возвращает `error.code=NOT_IMPLEMENTED`).
 
 #### DoD
 - Тесты для promote зелёные.

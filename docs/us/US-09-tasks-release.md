@@ -33,7 +33,7 @@
 #### AC
 - Given `status=in_progress` и рабочее дерево Git чистое, When `tasks.release`, Then `status=todo`.
 - Then поля `started_at`, `tool` очищены и создан commit.
-- And MCP-команда `tasks.release` готова к выполнению сервером (не является заглушкой `NOT_IMPLEMENTED`).
+- And MCP-инструмент `tasks.release` зарегистрирован в MCP-сервере (виден в `tools/list`), имеет `inputSchema` с параметрами из описания, и при вызове выполняет реальную операцию (не возвращает `error.code=NOT_IMPLEMENTED`).
 
 #### DoD
 - Тесты для release зелёные.

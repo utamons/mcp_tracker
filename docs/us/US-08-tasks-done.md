@@ -36,7 +36,7 @@
 #### AC
 - Given `status=in_progress` и рабочее дерево Git чистое, When `tasks.done`, Then `status=done` и выставлен `done_at` (локальное время сервера).
 - Then создан отдельный Git commit.
-- And MCP-команда `tasks.done` готова к выполнению сервером (не является заглушкой `NOT_IMPLEMENTED`).
+- And MCP-инструмент `tasks.done` зарегистрирован в MCP-сервере (виден в `tools/list`), имеет `inputSchema` с параметрами из описания, и при вызове выполняет реальную операцию (не возвращает `error.code=NOT_IMPLEMENTED`).
 
 #### DoD
 - Тесты для done зелёные.

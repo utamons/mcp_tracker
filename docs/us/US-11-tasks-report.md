@@ -34,7 +34,7 @@
 #### AC
 - Given from/to, When `tasks.report`, Then `done_count` считается по `done_at` внутри периода.
 - Then `remaining_count` = все задачи кроме `done/canceled`.
-- And MCP-команда `tasks.report` готова к выполнению сервером (не является заглушкой `NOT_IMPLEMENTED`).
+- And MCP-инструмент `tasks.report` зарегистрирован в MCP-сервере (виден в `tools/list`), имеет `inputSchema` с параметрами из описания, и при вызове выполняет реальную операцию (не возвращает `error.code=NOT_IMPLEMENTED`).
 
 #### DoD
 - Тесты для report зелёные.
