@@ -170,6 +170,51 @@ Moves a task from `backlog` to `todo` and commits the change.
   - Only allowed when `status === "backlog"` (otherwise `INVALID_STATUS_TRANSITION`)
 - Output: `{ ok: true, data: { id, project, type, title, status, created_at } }`
 
+### `tasks.claim`
+
+Claims a task: moves it from `todo` to `in_progress`, sets `started_at`, optionally stores `tool`, and commits the change.
+
+- Input:
+  - `project` (string): must match `^[a-z0-9-]+$` and the directory must exist
+  - `id` (string): task ID
+  - `tool` (string, optional): the claiming tool name
+- Rules:
+  - Only allowed when `status === "todo"` (otherwise `INVALID_STATUS_TRANSITION`)
+- Output: `{ ok: true, data: { id, project, type, title, status, created_at, started_at?, tool? } }`
+
+### `tasks.done`
+
+Completes a task: moves it from `in_progress` to `done`, sets `done_at`, and commits the change.
+
+- Input:
+  - `project` (string): must match `^[a-z0-9-]+$` and the directory must exist
+  - `id` (string): task ID
+- Rules:
+  - Only allowed when `status === "in_progress"` (otherwise `INVALID_STATUS_TRANSITION`)
+- Output: `{ ok: true, data: { id, project, type, title, status, created_at, done_at? } }`
+
+### `tasks.release`
+
+Releases a task back to the queue: moves it from `in_progress` to `todo`, clears `started_at` and `tool`, and commits the change.
+
+- Input:
+  - `project` (string): must match `^[a-z0-9-]+$` and the directory must exist
+  - `id` (string): task ID
+- Rules:
+  - Only allowed when `status === "in_progress"` (otherwise `INVALID_STATUS_TRANSITION`)
+- Output: `{ ok: true, data: { id, project, type, title, status, created_at } }`
+
+### `tasks.cancel`
+
+Cancels a task: moves it from `backlog`/`todo`/`in_progress` to `canceled`, sets `canceled_at`, and commits the change.
+
+- Input:
+  - `project` (string): must match `^[a-z0-9-]+$` and the directory must exist
+  - `id` (string): task ID
+- Rules:
+  - Not allowed when `status` is `done` or `canceled` (otherwise `INVALID_STATUS_TRANSITION`)
+- Output: `{ ok: true, data: { id, project, type, title, status, created_at, canceled_at? } }`
+
 ### `tasks.list`
 
 Lists tasks for a project with optional filtering.
