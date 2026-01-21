@@ -4,6 +4,13 @@ import { promisify } from "node:util";
 
 const execFileAsync = promisify(execFile);
 
+export type GitCommit = {
+  hash: string;
+  author: string;
+  date: string;
+  subject: string;
+};
+
 export class GitPort {
   constructor(private readonly _config: Config) {}
 
@@ -12,5 +19,16 @@ export class GitPort {
 
     await execFileAsync("git", ["add", "-A"], { cwd: repoRoot });
     await execFileAsync("git", ["commit", "-m", _message], { cwd: repoRoot });
+  }
+
+  async log(_filePath: string): Promise<GitCommit[]> {
+    void _filePath;
+    throw new Error("Not implemented");
+  }
+
+  async restoreFileToRevision(_filePath: string, _revision: string): Promise<void> {
+    void _filePath;
+    void _revision;
+    throw new Error("Not implemented");
   }
 }

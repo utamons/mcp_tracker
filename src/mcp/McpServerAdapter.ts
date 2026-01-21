@@ -16,6 +16,7 @@ export class McpServerAdapter {
     const toolNames = [
       "projects.list",
       "tasks.create",
+      "tasks.get",
       "tasks.update",
       "tasks.promote_to_todo",
       "tasks.claim",
