@@ -307,3 +307,4 @@ The server implements all tools listed in `tools/list`, including:
 - `tasks.history`
 - `tasks.rollback`
 - `tasks.verify`
+- `tasks.template`
