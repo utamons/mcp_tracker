@@ -15,7 +15,7 @@ export class McpServerAdapter {
   registerTools(registry: ToolRegistry): void {
     const toolNames = [
       "projects.list",
-      "task.template",
+      "tasks.template",
       "tasks.create",
       "tasks.get",
       "tasks.update",

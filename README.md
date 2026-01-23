@@ -133,7 +133,7 @@ Lists valid projects (directories) under `~/.mcp_tracker/projects`.
 - Input: `{}` (no parameters)
 - Output: `{ ok: true, data: { projects: string[] } }`
 
-### `task.template`
+### `tasks.template`
 
 Reads the `TASK_TEMPLATE.md` file from the project directory.
 

@@ -20,7 +20,7 @@ describe("ToolsListTool_returnsRegisteredTools", () => {
 });
 
 describe("ToolsListTool_includesProjectsTasksAndTemplate", () => {
-  it("includes projects.list, task.template, and all tasks.* tools.", async () => {
+  it("includes projects.list, tasks.template, and all tasks.* tools.", async () => {
     const registry = new ToolRegistry();
     const adapter = new McpServerAdapter(registry);
     adapter.registerTools(registry);
@@ -34,7 +34,7 @@ describe("ToolsListTool_includesProjectsTasksAndTemplate", () => {
     const names = response.data.map((item) => item.name);
     const expected = [
       "projects.list",
-      "task.template",
+      "tasks.template",
       "tasks.create",
       "tasks.get",
       "tasks.update",

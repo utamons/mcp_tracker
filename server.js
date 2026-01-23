@@ -1601,7 +1601,7 @@ async function executeTasksVerify(input) {
 const tools = [
   { name: "projects.list", title: "Projects list", inputSchema: emptyInputSchema },
   {
-    name: "task.template",
+    name: "tasks.template",
     title: "Task template",
     inputSchema: z.object({ project: z.string() }).strict(),
   },
@@ -1718,7 +1718,7 @@ for (const tool of tools) {
         return toMcpTextResult(result);
       }
 
-      if (tool.name === "task.template") {
+      if (tool.name === "tasks.template") {
         const result = await executeTaskTemplate(input);
         return toMcpTextResult(result);
       }
