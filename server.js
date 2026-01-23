@@ -3,7 +3,7 @@ import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js"
 import { z } from "zod";
 import os from "node:os";
 import path from "node:path";
-import { readdir, readFile, rm, writeFile } from "node:fs/promises";
+import { readdir, readFile, rm, stat, writeFile } from "node:fs/promises";
 import { execFile } from "node:child_process";
 import { promisify } from "node:util";
 
@@ -180,6 +180,67 @@ async function executeProjectsList() {
     return {
       ok: false,
       error: { code: "IO_ERROR", message: "Failed to read repo root." },
+    };
+  }
+}
+
+async function executeTaskTemplate(input) {
+  const project = input?.project;
+
+  if (typeof project !== "string" || !isValidProjectName(project)) {
+    return {
+      ok: false,
+      error: { code: "INVALID_PROJECT_NAME", message: "Invalid project name." },
+    };
+  }
+
+  const projectDir = path.join(defaultRepoRoot, project);
+  try {
+    const info = await stat(projectDir);
+    if (!info.isDirectory()) {
+      return {
+        ok: false,
+        error: { code: "PROJECT_NOT_FOUND", message: "Project not found." },
+      };
+    }
+  } catch (error) {
+    const code =
+      error instanceof Error ? error.code : undefined;
+
+    if (code === "ENOENT") {
+      return {
+        ok: false,
+        error: { code: "PROJECT_NOT_FOUND", message: "Project not found." },
+      };
+    }
+
+    return {
+      ok: false,
+      error: { code: "IO_ERROR", message: "Failed to read task template." },
+    };
+  }
+
+  const templatePath = path.join(projectDir, "TASK_TEMPLATE.md");
+  try {
+    const template = await readFile(templatePath, "utf8");
+    return { ok: true, data: { template } };
+  } catch (error) {
+    const code =
+      error instanceof Error ? error.code : undefined;
+
+    if (code === "ENOENT") {
+      return {
+        ok: false,
+        error: {
+          code: "TASK_TEMPLATE_NOT_FOUND",
+          message: "Task template not found.",
+        },
+      };
+    }
+
+    return {
+      ok: false,
+      error: { code: "IO_ERROR", message: "Failed to read task template." },
     };
   }
 }
@@ -1540,6 +1601,11 @@ async function executeTasksVerify(input) {
 const tools = [
   { name: "projects.list", title: "Projects list", inputSchema: emptyInputSchema },
   {
+    name: "task.template",
+    title: "Task template",
+    inputSchema: z.object({ project: z.string() }).strict(),
+  },
+  {
     name: "tasks.create",
     title: "Tasks create",
     inputSchema: z
@@ -1649,6 +1715,11 @@ for (const tool of tools) {
     async (input) => {
       if (tool.name === "projects.list") {
         const result = await executeProjectsList();
+        return toMcpTextResult(result);
+      }
+
+      if (tool.name === "task.template") {
+        const result = await executeTaskTemplate(input);
         return toMcpTextResult(result);
       }
 

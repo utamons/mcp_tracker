@@ -12,10 +12,43 @@ export class TaskTemplateTool {
   constructor(private readonly _store: TaskTemplateStore) {}
 
   async execute(_input: TaskTemplateInput): Promise<TaskTemplateResponse> {
-    void _input;
-    return {
-      ok: false,
-      error: { code: "NOT_IMPLEMENTED", message: "Not implemented." },
-    };
+    if (!isValidProjectName(_input.project)) {
+      return {
+        ok: false,
+        error: { code: "INVALID_PROJECT_NAME", message: "Invalid project name." },
+      };
+    }
+
+    try {
+      const template = await this._store.read(_input.project);
+      return { ok: true, data: { template } };
+    } catch (error) {
+      const code =
+        error instanceof Error
+          ? (error as unknown as { code?: string }).code
+          : undefined;
+
+      if (code === "PROJECT_NOT_FOUND") {
+        return { ok: false, error: { code, message: "Project not found." } };
+      }
+      if (code === "TASK_TEMPLATE_NOT_FOUND") {
+        return { ok: false, error: { code, message: "Task template not found." } };
+      }
+      if (code === "IO_ERROR") {
+        return {
+          ok: false,
+          error: { code, message: "Failed to read task template." },
+        };
+      }
+
+      return {
+        ok: false,
+        error: { code: "IO_ERROR", message: "Failed to read task template." },
+      };
+    }
   }
+}
+
+function isValidProjectName(name: string): boolean {
+  return /^[a-z0-9-]+$/.test(name);
 }

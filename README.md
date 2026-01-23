@@ -133,6 +133,14 @@ Lists valid projects (directories) under `~/.mcp_tracker/projects`.
 - Input: `{}` (no parameters)
 - Output: `{ ok: true, data: { projects: string[] } }`
 
+### `task.template`
+
+Reads the `TASK_TEMPLATE.md` file from the project directory.
+
+- Input:
+  - `project` (string): must match `^[a-z0-9-]+$` and the directory must exist
+- Output: `{ ok: true, data: { template: string } }`
+
 ### `tasks.create`
 
 Creates a task file in a project directory and commits the change.
