@@ -47,6 +47,12 @@ function isValidProjectName(name) {
   return /^[a-z0-9-]+$/.test(name);
 }
 
+const TASK_TEMPLATE_NAME = "TASK_TEMPLATE.md";
+
+function isTaskMarkdownFile(name) {
+  return name.endsWith(".md") && name !== TASK_TEMPLATE_NAME;
+}
+
 function nowIsoWithOffset() {
   const date = new Date();
 
@@ -1342,7 +1348,7 @@ async function executeTasksReport(input) {
   }
 
   const files = entries
-    .filter((e) => e.isFile() && e.name.endsWith(".md"))
+    .filter((e) => e.isFile() && isTaskMarkdownFile(e.name))
     .map((e) => e.name)
     .sort((a, b) => a.localeCompare(b));
 
@@ -1547,7 +1553,7 @@ async function executeTasksVerify(input) {
   }
 
   const files = entries
-    .filter((e) => e.isFile() && e.name.endsWith(".md"))
+    .filter((e) => e.isFile() && isTaskMarkdownFile(e.name))
     .map((e) => e.name)
     .sort((a, b) => a.localeCompare(b));
 

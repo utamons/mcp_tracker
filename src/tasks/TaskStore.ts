@@ -2,6 +2,7 @@ import type { Config } from "../config/Config.js";
 import { readdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { parseTask, serializeTask } from "./TaskParser.js";
+import { isTaskMarkdownFile } from "./TaskFiles.js";
 
 export type TaskEntity = {
   id: string;
@@ -88,7 +89,7 @@ export class TaskStore {
     }
 
     const files = entries
-      .filter((entry) => entry.isFile() && entry.name.endsWith(".md"))
+      .filter((entry) => entry.isFile() && isTaskMarkdownFile(entry.name))
       .map((entry) => entry.name)
       .sort((left, right) => left.localeCompare(right));
 

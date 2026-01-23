@@ -122,6 +122,47 @@ describe("Report_countsDoneInRange_inclusive", () => {
   });
 });
 
+describe("Report_ignoresTaskTemplate", () => {
+  it("ignores TASK_TEMPLATE.md when building the report.", async () => {
+    const repoRoot = await createTempDir();
+    const projectDir = path.join(repoRoot, "frontend");
+    await mkdir(projectDir, { recursive: true });
+
+    await writeFile(
+      path.join(projectDir, "FR-001.md"),
+      taskMarkdown({
+        id: "FR-001",
+        project: "frontend",
+        type: "user_story",
+        title: "A",
+        status: "done",
+        created_at: "2026-01-01T00:00:00+00:00",
+        done_at: "2026-01-01T00:00:00+00:00",
+      }),
+      "utf8",
+    );
+
+    await writeFile(
+      path.join(projectDir, "TASK_TEMPLATE.md"),
+      "# Task Template\n\n## Description\n",
+      "utf8",
+    );
+
+    const tool = createTool(repoRoot);
+    const response = await tool.execute({
+      project: "frontend",
+      from: "2026-01-01T00:00:00+00:00",
+      to: "2026-01-10T00:00:00+00:00",
+    });
+
+    expect(response.ok).toBe(true);
+    if (!response.ok) return;
+
+    expect(response.data.done_count).toBe(1);
+    expect(response.data.remaining_count).toBe(0);
+  });
+});
+
 describe("Report_remainingExcludesDoneCanceled", () => {
   it("counts remaining_count excluding done and canceled.", async () => {
     const repoRoot = await createTempDir();
@@ -268,4 +309,3 @@ describe("Report_invalidTimestamps", () => {
     expect(response.error.code).toBe("INVALID_TASK_FORMAT");
   });
 });
-

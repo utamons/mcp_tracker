@@ -3,6 +3,7 @@ import type { ProjectRegistry } from "../projects/ProjectRegistry.js";
 import type { Violation } from "./TaskValidator.js";
 import { TaskValidator } from "./TaskValidator.js";
 import { parseTask } from "./TaskParser.js";
+import { isTaskMarkdownFile } from "./TaskFiles.js";
 import { readdir, readFile } from "node:fs/promises";
 import path from "node:path";
 
@@ -46,7 +47,7 @@ export class ProjectVerifier {
     }
 
     const files = entries
-      .filter((e) => e.isFile() && e.name.endsWith(".md"))
+      .filter((e) => e.isFile() && isTaskMarkdownFile(e.name))
       .map((e) => e.name)
       .sort((a, b) => a.localeCompare(b));
 
