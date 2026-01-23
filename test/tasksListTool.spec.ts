@@ -180,6 +180,34 @@ describe("TasksList_textSearch_titleAndBody", () => {
   });
 });
 
+describe("TasksList_ignoresTaskTemplate", () => {
+  it("игнорирует TASK_TEMPLATE.md при чтении задач.", async () => {
+    const repoRoot = await createTempDir();
+    const projectDir = path.join(repoRoot, "frontend");
+    await mkdir(projectDir, { recursive: true });
+
+    const store = new TaskStore(new Config(repoRoot));
+    await seedTask(store, {
+      id: "FR-001",
+      type: "user_story",
+      title: "Valid",
+      status: "todo",
+      created_at: "2026-01-21T10:00:00+00:00",
+      body: "Body",
+    });
+
+    await writeFile(path.join(projectDir, "TASK_TEMPLATE.md"), "template");
+
+    const tool = createTool(repoRoot);
+    const response = await tool.execute({ project: "frontend" });
+
+    expect(response.ok).toBe(true);
+    if (!response.ok) return;
+
+    expect(response.data.tasks.map((t) => t.id)).toEqual(["FR-001"]);
+  });
+});
+
 describe("TasksList_invalidTaskFormat", () => {
   it("при некорректном формате любой задачи возвращает INVALID_TASK_FORMAT.", async () => {
     const repoRoot = await createTempDir();

@@ -474,7 +474,7 @@ async function executeTasksList(input) {
 
   const tasks = [];
   const files = entries
-    .filter((entry) => entry.isFile() && entry.name.endsWith(".md"))
+    .filter((entry) => entry.isFile() && isTaskMarkdownFile(entry.name))
     .map((entry) => entry.name)
     .sort((left, right) => left.localeCompare(right));
 
