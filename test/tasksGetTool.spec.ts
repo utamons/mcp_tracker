@@ -73,7 +73,9 @@ describe("TasksGet_acceptsLongerIds", () => {
 });
 
 describe("TasksGet_invalidIdFormat", () => {
-  it.each(["FR-01", "FR-abc", "FR-"])("returns INVALID_TASK_FORMAT for %s.", async (id) => {
+  it.each(["FR-01", "FR-abc", "FR-", "fr-001", "F-001", "FRONT-001"])(
+    "returns INVALID_TASK_FORMAT for %s.",
+    async (id) => {
     const repoRoot = await createTempDir();
     const projectDir = path.join(repoRoot, "frontend");
     await mkdir(projectDir, { recursive: true });
@@ -85,7 +87,8 @@ describe("TasksGet_invalidIdFormat", () => {
     if (response.ok) return;
 
     expect(response.error.code).toBe("INVALID_TASK_FORMAT");
-  });
+  },
+  );
 });
 
 describe("TasksGet_invalidProjectName", () => {

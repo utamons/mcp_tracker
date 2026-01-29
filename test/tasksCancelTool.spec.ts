@@ -174,7 +174,9 @@ describe("Cancel_acceptsLongerIds", () => {
 });
 
 describe("Cancel_invalidIdFormat", () => {
-  it.each(["FR-01", "FR-abc", "FR-"])("returns INVALID_TASK_FORMAT for %s.", async (id) => {
+  it.each(["FR-01", "FR-abc", "FR-", "fr-001", "F-001", "FRONT-001"])(
+    "returns INVALID_TASK_FORMAT for %s.",
+    async (id) => {
     const repoRoot = await createTempDir();
     await initGitRepo(repoRoot);
     await mkdir(path.join(repoRoot, "frontend"), { recursive: true });
@@ -186,7 +188,8 @@ describe("Cancel_invalidIdFormat", () => {
     if (response.ok) return;
 
     expect(response.error.code).toBe("INVALID_TASK_FORMAT");
-  });
+  },
+  );
 });
 
 describe("Cancel_fromTodo_setsCanceledAt", () => {
