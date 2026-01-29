@@ -86,6 +86,40 @@ describe("Rollback_restoresFileAndCommits", () => {
   });
 });
 
+describe("Rollback_acceptsLongerIds", () => {
+  it.each(["FR-1000", "FR-10000"])("accepts %s.", async (id) => {
+    const repoRoot = await createTempDir();
+    await initGitRepo(repoRoot);
+
+    const projectDir = path.join(repoRoot, "frontend");
+    await mkdir(projectDir, { recursive: true });
+
+    const initial = `---\nid: ${id}\nproject: frontend\ntype: user_story\ntitle: "A"\nstatus: backlog\ncreated_at: 2026-01-01T00:00:00+00:00\n---\n`;
+    await writeFile(path.join(projectDir, `${id}.md`), initial, "utf8");
+    await git(repoRoot, ["add", "."]);
+    await git(repoRoot, ["commit", "-m", "seed"]);
+
+    const rev = (await git(repoRoot, ["rev-parse", "HEAD"])).trim();
+
+    const updated = `---\nid: ${id}\nproject: frontend\ntype: user_story\ntitle: "A"\nstatus: todo\ncreated_at: 2026-01-01T00:00:00+00:00\n---\n`;
+    await writeFile(path.join(projectDir, `${id}.md`), updated, "utf8");
+    await git(repoRoot, ["add", "."]);
+    await git(repoRoot, ["commit", "-m", "promote"]);
+
+    const tool = createTool(repoRoot);
+    const response = await tool.execute({ project: "frontend", id, revision: rev });
+
+    expect(response.ok).toBe(true);
+    if (!response.ok) return;
+
+    const file = await readFile(path.join(projectDir, `${id}.md`), "utf8");
+    expect(file).toBe(initial);
+
+    const subject = (await git(repoRoot, ["log", "-1", "--pretty=%s"])).trim();
+    expect(subject).toBe(`rollback ${id} to ${rev}`);
+  });
+});
+
 describe("Rollback_requiresCleanWorktree", () => {
   it("returns GIT_DIRTY_WORKTREE when worktree is dirty.", async () => {
     const repoRoot = await createTempDir();
@@ -159,4 +193,3 @@ describe("Rollback_invalidRevision", () => {
     expect(fileAfter).toBe(fileBefore);
   });
 });
-

@@ -85,6 +85,17 @@ async function seedTaskFile(repoRoot: string, markdown: string): Promise<void> {
   await git(repoRoot, ["commit", "-m", "seed"]);
 }
 
+async function seedTaskFileWithId(
+  repoRoot: string,
+  id: string,
+  markdown: string,
+): Promise<void> {
+  const taskPath = path.join(repoRoot, "frontend", `${id}.md`);
+  await writeFile(taskPath, markdown, "utf8");
+  await git(repoRoot, ["add", "."]);
+  await git(repoRoot, ["commit", "-m", "seed"]);
+}
+
 afterEach(async () => {
   await Promise.all(
     tempDirs.splice(0, tempDirs.length).map((dir) =>
@@ -125,6 +136,36 @@ describe("Claim_todoToInProgress_setsStartedAt", () => {
     const file = await readFile(taskPath, "utf8");
     expect(file).toMatch(/\nstatus:\s*in_progress\n/);
     expect(file).toMatch(/\nstarted_at:\s*\d{4}-\d{2}-\d{2}T/);
+  });
+});
+
+describe("Claim_acceptsLongerIds", () => {
+  it.each(["FR-1000", "FR-10000"])("accepts %s.", async (id) => {
+    const repoRoot = await createTempDir();
+    await initGitRepo(repoRoot);
+    await mkdir(path.join(repoRoot, "frontend"), { recursive: true });
+
+    await seedTaskFileWithId(
+      repoRoot,
+      id,
+      serializeTaskMarkdown({
+        id,
+        project: "frontend",
+        type: "user_story",
+        title: "My task",
+        status: "todo",
+        created_at: "2026-01-01T00:00:00+00:00",
+        body: "Hello",
+      }),
+    );
+
+    const tool = createTool(repoRoot);
+    const response = await tool.execute({ project: "frontend", id });
+
+    expect(response.ok).toBe(true);
+    if (!response.ok) return;
+
+    expect(response.data.id).toBe(id);
   });
 });
 
@@ -324,4 +365,3 @@ describe("Claim_doesNotMutateBody", () => {
     expect(file).toContain(originalBody);
   });
 });
-

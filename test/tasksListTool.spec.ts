@@ -75,6 +75,39 @@ describe("TasksList_allTasks", () => {
   });
 });
 
+describe("TasksList_acceptsLongerIds", () => {
+  it("returns tasks with 4+ digit ids.", async () => {
+    const repoRoot = await createTempDir();
+    await mkdir(path.join(repoRoot, "frontend"), { recursive: true });
+
+    const store = new TaskStore(new Config(repoRoot));
+    await seedTask(store, {
+      id: "FR-1000",
+      type: "user_story",
+      title: "First",
+      status: "backlog",
+      created_at: "2026-01-21T10:00:00+00:00",
+      body: "Hello",
+    });
+    await seedTask(store, {
+      id: "FR-10000",
+      type: "bug",
+      title: "Second",
+      status: "todo",
+      created_at: "2026-01-21T11:00:00+00:00",
+      body: "World",
+    });
+
+    const tool = createTool(repoRoot);
+    const response = await tool.execute({ project: "frontend" });
+
+    expect(response.ok).toBe(true);
+    if (!response.ok) return;
+
+    expect(response.data.tasks.map((t) => t.id)).toEqual(["FR-1000", "FR-10000"]);
+  });
+});
+
 describe("TasksList_filterByStatus", () => {
   it("с status возвращает только задачи этого статуса.", async () => {
     const repoRoot = await createTempDir();

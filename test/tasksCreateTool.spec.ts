@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it } from "vitest";
 import { execFile } from "node:child_process";
-import { mkdtemp, mkdir, readFile, rm, writeFile } from "node:fs/promises";
+import { mkdtemp, mkdir, readFile, readdir, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { promisify } from "node:util";
@@ -205,6 +205,123 @@ describe("TasksCreate_allocatesNextId_after9999", () => {
     if (!response.ok) return;
 
     expect(response.data.id).toBe("FR-10000");
+  });
+});
+
+describe("TasksCreate_allocatesNextId_mixedFormats", () => {
+  it("picks the max ID across mixed formats.", async () => {
+    const repoRoot = await createTempDir();
+    await initGitRepo(repoRoot);
+
+    const projectDir = path.join(repoRoot, "frontend");
+    await mkdir(projectDir, { recursive: true });
+    await writeFile(path.join(projectDir, "FR-099.md"), "---\nid: FR-099\n---\n");
+    await writeFile(path.join(projectDir, "FR-1000.md"), "---\nid: FR-1000\n---\n");
+    await writeFile(path.join(projectDir, "FR-9999.md"), "---\nid: FR-9999\n---\n");
+    await git(repoRoot, ["add", "."]);
+    await git(repoRoot, ["commit", "-m", "seed"]);
+
+    const tool = createTool(repoRoot);
+    const response = await tool.execute({
+      project: "frontend",
+      type: "user_story",
+      title: "My task",
+    });
+
+    expect(response.ok).toBe(true);
+    if (!response.ok) return;
+
+    expect(response.data.id).toBe("FR-10000");
+  });
+});
+
+describe("TasksCreate_allocationOverflowSafeInteger", () => {
+  it("returns IO_ERROR and does not create a task when ID overflows.", async () => {
+    const repoRoot = await createTempDir();
+    await initGitRepo(repoRoot);
+
+    const projectDir = path.join(repoRoot, "frontend");
+    await mkdir(projectDir, { recursive: true });
+
+    const maxSafe = Number.MAX_SAFE_INTEGER;
+    const maxId = `FR-${String(maxSafe)}`;
+    await writeFile(path.join(projectDir, `${maxId}.md`), `---\nid: ${maxId}\n---\n`);
+    await git(repoRoot, ["add", "."]);
+    await git(repoRoot, ["commit", "-m", "seed"]);
+
+    const commitCountBefore = Number(
+      (await git(repoRoot, ["rev-list", "--count", "HEAD"])).trim(),
+    );
+
+    const tool = createTool(repoRoot);
+    const response = await tool.execute({
+      project: "frontend",
+      type: "user_story",
+      title: "My task",
+    });
+
+    expect(response.ok).toBe(false);
+    if (response.ok) return;
+
+    expect(response.error.code).toBe("IO_ERROR");
+    expect(response.error.message).toBe("Failed to allocate task id.");
+
+    const commitCountAfter = Number(
+      (await git(repoRoot, ["rev-list", "--count", "HEAD"])).trim(),
+    );
+    expect(commitCountAfter).toBe(commitCountBefore);
+
+    const files = await readdir(projectDir);
+    expect(files).toEqual([`${maxId}.md`]);
+  });
+});
+
+describe("TasksCreate_handlesAllocatorErrors", () => {
+  it("returns IO_ERROR when id allocator throws.", async () => {
+    const repoRoot = await createTempDir();
+    await initGitRepo(repoRoot);
+    await mkdir(path.join(repoRoot, "frontend"), { recursive: true });
+
+    class FailingAllocator {
+      async nextId(): Promise<string> {
+        const error = new Error("Task id overflow.");
+        (error as { code?: string }).code = "ID_OVERFLOW";
+        throw error;
+      }
+    }
+
+    const config = new Config(repoRoot);
+    const tool = new TasksCreateTool(
+      new WorktreeGuard(config),
+      new FailingAllocator() as IdAllocator,
+      new TaskStore(config),
+      new Clock(),
+      new GitPort(config),
+    );
+
+    const commitCountBefore = Number(
+      (await git(repoRoot, ["rev-list", "--count", "HEAD"])).trim(),
+    );
+
+    const response = await tool.execute({
+      project: "frontend",
+      type: "user_story",
+      title: "My task",
+    });
+
+    expect(response.ok).toBe(false);
+    if (response.ok) return;
+
+    expect(response.error.code).toBe("IO_ERROR");
+    expect(response.error.message).toBe("Failed to allocate task id.");
+
+    const commitCountAfter = Number(
+      (await git(repoRoot, ["rev-list", "--count", "HEAD"])).trim(),
+    );
+    expect(commitCountAfter).toBe(commitCountBefore);
+
+    const files = await readdir(path.join(repoRoot, "frontend"));
+    expect(files).toEqual([]);
   });
 });
 

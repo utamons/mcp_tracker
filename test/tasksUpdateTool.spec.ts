@@ -97,6 +97,38 @@ describe("TasksUpdate_backlog_allowsTypeTitleBody", () => {
   });
 });
 
+describe("TasksUpdate_acceptsLongerIds", () => {
+  it.each(["FR-1000", "FR-10000"])("updates %s.", async (id) => {
+    const repoRoot = await createTempDir();
+    await initGitRepo(repoRoot);
+    await mkdir(path.join(repoRoot, "frontend"), { recursive: true });
+
+    await seedTask(repoRoot, {
+      id,
+      project: "frontend",
+      type: "bug",
+      title: "Old title",
+      status: "backlog",
+      created_at: "2026-01-01T00:00:00+00:00",
+      body: "Old body",
+    });
+
+    const tool = createTool(repoRoot);
+    const response = await tool.execute({
+      project: "frontend",
+      id,
+      patch: { title: "New title" },
+    });
+
+    expect(response.ok).toBe(true);
+    if (!response.ok) return;
+
+    const taskPath = path.join(repoRoot, "frontend", `${id}.md`);
+    const file = await readFile(taskPath, "utf8");
+    expect(file).toContain("New title");
+  });
+});
+
 describe("TasksUpdate_nonBacklog_forbidden", () => {
   it("returns FORBIDDEN_UPDATE_IN_STATUS in todo/in_progress/done/canceled.", async () => {
     const statuses: TaskEntity["status"][] = [
@@ -311,4 +343,3 @@ describe("TasksUpdate_invalidTaskFormat", () => {
     expect(commitCountAfter).toBe(commitCountBefore);
   });
 });
-

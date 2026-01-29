@@ -79,6 +79,39 @@ describe("History_returnsGitLogForTaskFile", () => {
   });
 });
 
+describe("History_acceptsLongerIds", () => {
+  it.each(["FR-1000", "FR-10000"])("accepts %s.", async (id) => {
+    const repoRoot = await createTempDir();
+    await initGitRepo(repoRoot);
+
+    const projectDir = path.join(repoRoot, "frontend");
+    await mkdir(projectDir, { recursive: true });
+    await writeFile(
+      path.join(projectDir, `${id}.md`),
+      `---\nid: ${id}\nproject: frontend\ntype: user_story\ntitle: "A"\nstatus: backlog\ncreated_at: 2026-01-01T00:00:00+00:00\n---\n`,
+      "utf8",
+    );
+    await git(repoRoot, ["add", "."]);
+    await git(repoRoot, ["commit", "-m", "seed"]);
+
+    await writeFile(
+      path.join(projectDir, `${id}.md`),
+      `---\nid: ${id}\nproject: frontend\ntype: user_story\ntitle: "A"\nstatus: todo\ncreated_at: 2026-01-01T00:00:00+00:00\n---\n`,
+      "utf8",
+    );
+    await git(repoRoot, ["add", "."]);
+    await git(repoRoot, ["commit", "-m", "promote"]);
+
+    const tool = createTool(repoRoot);
+    const response = await tool.execute({ project: "frontend", id });
+
+    expect(response.ok).toBe(true);
+    if (!response.ok) return;
+
+    expect(response.data.commits.length).toBeGreaterThanOrEqual(2);
+  });
+});
+
 describe("History_taskNotFound", () => {
   it("returns TASK_NOT_FOUND when task file does not exist.", async () => {
     const repoRoot = await createTempDir();
@@ -143,4 +176,3 @@ describe("History_resultIsStructured", () => {
     expect(first).toHaveProperty("subject");
   });
 });
-

@@ -55,6 +55,32 @@ describe("Verify_validProject_noViolations", () => {
   });
 });
 
+describe("Verify_acceptsLongerIds", () => {
+  it("returns no violations for 4+ digit ids.", async () => {
+    const repoRoot = await createTempDir();
+    const projectDir = path.join(repoRoot, "frontend");
+    await mkdir(projectDir, { recursive: true });
+    await writeFile(
+      path.join(projectDir, "FR-1000.md"),
+      "---\nid: FR-1000\nproject: frontend\ntype: user_story\ntitle: \"A\"\nstatus: backlog\ncreated_at: 2026-01-01T00:00:00+00:00\n---\n",
+      "utf8",
+    );
+    await writeFile(
+      path.join(projectDir, "FR-10000.md"),
+      "---\nid: FR-10000\nproject: frontend\ntype: user_story\ntitle: \"B\"\nstatus: backlog\ncreated_at: 2026-01-01T00:00:00+00:00\n---\n",
+      "utf8",
+    );
+
+    const tool = createTool(repoRoot);
+    const response = await tool.execute({ project: "frontend" });
+
+    expect(response.ok).toBe(true);
+    if (!response.ok) return;
+
+    expect(response.data.violations).toEqual([]);
+  });
+});
+
 describe("Verify_ignoresTaskTemplate", () => {
   it("ignores TASK_TEMPLATE.md when verifying tasks.", async () => {
     const repoRoot = await createTempDir();

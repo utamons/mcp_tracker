@@ -50,6 +50,28 @@ describe("TasksGet_returnsTaskDetailsWithBody", () => {
   });
 });
 
+describe("TasksGet_acceptsLongerIds", () => {
+  it.each(["FR-1000", "FR-10000"])("accepts %s.", async (id) => {
+    const repoRoot = await createTempDir();
+    const projectDir = path.join(repoRoot, "frontend");
+    await mkdir(projectDir, { recursive: true });
+
+    await writeFile(
+      path.join(projectDir, `${id}.md`),
+      `---\nid: ${id}\nproject: frontend\ntype: user_story\ntitle: "A"\nstatus: backlog\ncreated_at: 2026-01-01T00:00:00+00:00\n---\n`,
+      "utf8",
+    );
+
+    const tool = createTool(repoRoot);
+    const response = await tool.execute({ project: "frontend", id });
+
+    expect(response.ok).toBe(true);
+    if (!response.ok) return;
+
+    expect(response.data.id).toBe(id);
+  });
+});
+
 describe("TasksGet_invalidProjectName", () => {
   it("returns INVALID_PROJECT_NAME when project name is invalid.", async () => {
     const repoRoot = await createTempDir();
@@ -134,4 +156,3 @@ describe("TasksGet_bodyEmptyOmitsBodyField", () => {
     expect(response.data).not.toHaveProperty("body");
   });
 });
-
