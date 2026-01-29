@@ -66,6 +66,10 @@ Each task is a single file:
 
 - `~/.mcp_tracker/projects/<project>/<ID>.md`
 
+Naming rule:
+
+- Task `ID` (the filename and the `id` frontmatter field) must match `^[A-Z0-9-]+$` (uppercase letters only).
+
 ### Task file format
 
 Example:
@@ -151,6 +155,8 @@ Creates a task file in a project directory and commits the change.
   - `title` (string): non-empty
   - `body` (string, optional)
 - Output: `{ ok: true, data: { id, project, type, title, status, created_at } }`
+- Notes:
+  - `id` in output must match `^[A-Z0-9-]+$`
 
 ### `tasks.update`
 
@@ -158,7 +164,7 @@ Updates an existing task and commits the change.
 
 - Input:
   - `project` (string): must match `^[a-z0-9-]+$` and the directory must exist
-  - `id` (string): task ID (also the filename without `.md`)
+  - `id` (string): task ID (also the filename without `.md`), must match `^[A-Z0-9-]+$`
   - `patch` (object):
     - `type` (optional enum): `user_story` | `bug`
     - `title` (optional string): non-empty
@@ -173,7 +179,7 @@ Moves a task from `backlog` to `todo` and commits the change.
 
 - Input:
   - `project` (string): must match `^[a-z0-9-]+$` and the directory must exist
-  - `id` (string): task ID
+  - `id` (string): task ID, must match `^[A-Z0-9-]+$`
 - Rules:
   - Only allowed when `status === "backlog"` (otherwise `INVALID_STATUS_TRANSITION`)
 - Output: `{ ok: true, data: { id, project, type, title, status, created_at } }`
@@ -184,7 +190,7 @@ Claims a task: moves it from `todo` to `in_progress`, sets `started_at`, optiona
 
 - Input:
   - `project` (string): must match `^[a-z0-9-]+$` and the directory must exist
-  - `id` (string): task ID
+  - `id` (string): task ID, must match `^[A-Z0-9-]+$`
   - `tool` (string, optional): the claiming tool name
 - Rules:
   - Only allowed when `status === "todo"` (otherwise `INVALID_STATUS_TRANSITION`)
@@ -196,7 +202,7 @@ Completes a task: moves it from `in_progress` to `done`, sets `done_at`, and com
 
 - Input:
   - `project` (string): must match `^[a-z0-9-]+$` and the directory must exist
-  - `id` (string): task ID
+  - `id` (string): task ID, must match `^[A-Z0-9-]+$`
 - Rules:
   - Only allowed when `status === "in_progress"` (otherwise `INVALID_STATUS_TRANSITION`)
 - Output: `{ ok: true, data: { id, project, type, title, status, created_at, done_at? } }`
@@ -207,7 +213,7 @@ Releases a task back to the queue: moves it from `in_progress` to `todo`, clears
 
 - Input:
   - `project` (string): must match `^[a-z0-9-]+$` and the directory must exist
-  - `id` (string): task ID
+  - `id` (string): task ID, must match `^[A-Z0-9-]+$`
 - Rules:
   - Only allowed when `status === "in_progress"` (otherwise `INVALID_STATUS_TRANSITION`)
 - Output: `{ ok: true, data: { id, project, type, title, status, created_at } }`
@@ -218,7 +224,7 @@ Cancels a task: moves it from `backlog`/`todo`/`in_progress` to `canceled`, sets
 
 - Input:
   - `project` (string): must match `^[a-z0-9-]+$` and the directory must exist
-  - `id` (string): task ID
+  - `id` (string): task ID, must match `^[A-Z0-9-]+$`
 - Rules:
   - Not allowed when `status` is `done` or `canceled` (otherwise `INVALID_STATUS_TRANSITION`)
 - Output: `{ ok: true, data: { id, project, type, title, status, created_at, canceled_at? } }`
@@ -242,7 +248,7 @@ Reads a single task by `id` and returns an extended representation (including `b
 
 - Input:
   - `project` (string): must match `^[a-z0-9-]+$` and the directory must exist
-  - `id` (string): task ID (also the filename without `.md`)
+  - `id` (string): task ID (also the filename without `.md`), must match `^[A-Z0-9-]+$`
 - Output: `{ ok: true, data: TaskDetails }`
 - `TaskDetails`:
   - `id`, `project`, `type`, `title`, `status`, `created_at`
@@ -264,7 +270,7 @@ Returns Git history for the task file in a structured form.
 
 - Input:
   - `project` (string): must match `^[a-z0-9-]+$` and the directory must exist
-  - `id` (string): task ID
+  - `id` (string): task ID, must match `^[A-Z0-9-]+$`
 - Output: `{ ok: true, data: { commits: GitCommit[] } }`
 - `GitCommit`:
   - `hash`, `author`, `date`, `subject`
@@ -275,7 +281,7 @@ Rolls back the task file to the specified Git revision and creates a separate co
 
 - Input:
   - `project` (string): must match `^[a-z0-9-]+$` and the directory must exist
-  - `id` (string): task ID
+  - `id` (string): task ID, must match `^[A-Z0-9-]+$`
   - `revision` (string): git revision (hash/branch/tag)
 - Output: `{ ok: true, data: TaskView }`
 
