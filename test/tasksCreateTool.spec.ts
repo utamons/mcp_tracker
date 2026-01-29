@@ -132,6 +132,82 @@ describe("TasksCreate_allocatesNextId_existingTasks", () => {
   });
 });
 
+describe("TasksCreate_allocatesNextId_after999", () => {
+  it("allocates 4-digit IDs after 999 existing tasks.", async () => {
+    const repoRoot = await createTempDir();
+    await initGitRepo(repoRoot);
+
+    const projectDir = path.join(repoRoot, "frontend");
+    await mkdir(projectDir, { recursive: true });
+    await writeFile(path.join(projectDir, "FR-998.md"), "---\nid: FR-998\n---\n");
+    await writeFile(path.join(projectDir, "FR-999.md"), "---\nid: FR-999\n---\n");
+    await git(repoRoot, ["add", "."]);
+    await git(repoRoot, ["commit", "-m", "seed"]);
+
+    const tool = createTool(repoRoot);
+    const response = await tool.execute({
+      project: "frontend",
+      type: "user_story",
+      title: "My task",
+    });
+
+    expect(response.ok).toBe(true);
+    if (!response.ok) return;
+
+    expect(response.data.id).toBe("FR-1000");
+  });
+});
+
+describe("TasksCreate_allocatesNextId_existing4Digit", () => {
+  it("allocates next 4-digit ID when 4-digit tasks already exist.", async () => {
+    const repoRoot = await createTempDir();
+    await initGitRepo(repoRoot);
+
+    const projectDir = path.join(repoRoot, "frontend");
+    await mkdir(projectDir, { recursive: true });
+    await writeFile(path.join(projectDir, "FR-1000.md"), "---\nid: FR-1000\n---\n");
+    await git(repoRoot, ["add", "."]);
+    await git(repoRoot, ["commit", "-m", "seed"]);
+
+    const tool = createTool(repoRoot);
+    const response = await tool.execute({
+      project: "frontend",
+      type: "user_story",
+      title: "My task",
+    });
+
+    expect(response.ok).toBe(true);
+    if (!response.ok) return;
+
+    expect(response.data.id).toBe("FR-1001");
+  });
+});
+
+describe("TasksCreate_allocatesNextId_after9999", () => {
+  it("allocates 5-digit IDs after 9999 existing tasks.", async () => {
+    const repoRoot = await createTempDir();
+    await initGitRepo(repoRoot);
+
+    const projectDir = path.join(repoRoot, "frontend");
+    await mkdir(projectDir, { recursive: true });
+    await writeFile(path.join(projectDir, "FR-9999.md"), "---\nid: FR-9999\n---\n");
+    await git(repoRoot, ["add", "."]);
+    await git(repoRoot, ["commit", "-m", "seed"]);
+
+    const tool = createTool(repoRoot);
+    const response = await tool.execute({
+      project: "frontend",
+      type: "user_story",
+      title: "My task",
+    });
+
+    expect(response.ok).toBe(true);
+    if (!response.ok) return;
+
+    expect(response.data.id).toBe("FR-10000");
+  });
+});
+
 describe("TasksCreate_setsCreatedAtAndStatus", () => {
   it("sets created_at and status=backlog.", async () => {
     const repoRoot = await createTempDir();
@@ -242,4 +318,3 @@ describe("TasksCreate_returnsTaskView", () => {
     expect(response.data.created_at).toMatch(ISO_WITH_OFFSET_REGEX);
   });
 });
-
