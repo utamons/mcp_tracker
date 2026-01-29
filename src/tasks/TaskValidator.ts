@@ -1,4 +1,5 @@
 import type { TaskEntity } from "./TaskStore.js";
+import { isValidTaskId } from "./TaskId.js";
 
 export type Violation = {
   code: string;
@@ -15,6 +16,14 @@ export class TaskValidator {
         code: "FILE_NAME_MISMATCH",
         message: "File name does not match task id.",
         details: { file_id: _fileNameId, task_id: _task.id },
+      });
+    }
+
+    if (!isValidTaskId(_task.id)) {
+      violations.push({
+        code: "INVALID_TASK_ID",
+        message: "Invalid task id.",
+        details: { id: _task.id },
       });
     }
 

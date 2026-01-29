@@ -12,25 +12,28 @@ export class IdAllocator {
 
     const entries = await readdir(projectDir, { withFileTypes: true });
 
-    let max = 0;
-    const pattern = new RegExp(`^${prefix}-(\\d{3})\\.md$`);
+    let max = 0n;
+    const pattern = new RegExp(`^${prefix}-(\\d{3,})\\.md$`);
     for (const entry of entries) {
       if (!entry.isFile()) continue;
       const match = entry.name.match(pattern);
       if (!match) continue;
 
-      const num = Number(match[1]);
-      if (Number.isFinite(num)) max = Math.max(max, num);
+      const num = BigInt(match[1]);
+      if (num > max) max = num;
     }
 
-    const next = max + 1;
-    if (next > 999) {
+    const next = max + 1n;
+    if (next > BigInt(Number.MAX_SAFE_INTEGER)) {
       const error = new Error("Task id overflow.");
       (error as unknown as { code: string }).code = "ID_OVERFLOW";
       throw error;
     }
 
-    return `${prefix}-${String(next).padStart(3, "0")}`;
+    const nextNumber = Number(next);
+    const suffix =
+      nextNumber <= 999 ? String(nextNumber).padStart(3, "0") : String(nextNumber);
+    return `${prefix}-${suffix}`;
   }
 }
 

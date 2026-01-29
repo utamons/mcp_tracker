@@ -2,6 +2,7 @@ import type { Config } from "../config/Config.js";
 import { readdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { parseTask, serializeTask } from "./TaskParser.js";
+import { isValidTaskId } from "./TaskId.js";
 import { isTaskMarkdownFile } from "./TaskFiles.js";
 
 export type TaskEntity = {
@@ -52,6 +53,11 @@ export class TaskStore {
     }
 
     const task = parseTask(content);
+    if (!isValidTaskId(_id) || !isValidTaskId(task.id)) {
+      const invalid = new Error("Invalid task format.");
+      (invalid as unknown as { code: string }).code = "INVALID_TASK_FORMAT";
+      throw invalid;
+    }
     if (task.project !== _project || task.id !== _id) {
       const invalid = new Error("Invalid task format.");
       (invalid as unknown as { code: string }).code = "INVALID_TASK_FORMAT";
@@ -125,6 +131,11 @@ export class TaskStore {
         throw invalid;
       }
 
+      if (!isValidTaskId(expectedId) || !isValidTaskId(task.id)) {
+        const invalid = new Error("Invalid task format.");
+        (invalid as unknown as { code: string }).code = "INVALID_TASK_FORMAT";
+        throw invalid;
+      }
       if (task.project !== _project || task.id !== expectedId) {
         const invalid = new Error("Invalid task format.");
         (invalid as unknown as { code: string }).code = "INVALID_TASK_FORMAT";

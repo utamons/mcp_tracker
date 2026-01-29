@@ -47,6 +47,10 @@ function isValidProjectName(name) {
   return /^[a-z0-9-]+$/.test(name);
 }
 
+function isValidTaskId(id) {
+  return typeof id === "string" && /^[A-Za-z0-9]+-\d{3,}$/.test(id);
+}
+
 const TASK_TEMPLATE_NAME = "TASK_TEMPLATE.md";
 
 function isTaskMarkdownFile(name) {
@@ -103,22 +107,25 @@ async function nextTaskId(repoRoot, project) {
   const projectDir = path.join(repoRoot, project);
   const entries = await readdir(projectDir, { withFileTypes: true });
 
-  const pattern = new RegExp(`^${prefix}-(\\d{3})\\.md$`);
-  let max = 0;
+  const pattern = new RegExp(`^${prefix}-(\\d{3,})\\.md$`);
+  let max = 0n;
   for (const entry of entries) {
     if (!entry.isFile()) continue;
     const match = entry.name.match(pattern);
     if (!match) continue;
-    const num = Number(match[1]);
-    if (Number.isFinite(num)) max = Math.max(max, num);
+    const num = BigInt(match[1]);
+    if (num > max) max = num;
   }
 
-  const next = max + 1;
-  if (next > 999) {
+  const next = max + 1n;
+  if (next > BigInt(Number.MAX_SAFE_INTEGER)) {
     return null;
   }
 
-  return `${prefix}-${String(next).padStart(3, "0")}`;
+  const nextNumber = Number(next);
+  const suffix =
+    nextNumber <= 999 ? String(nextNumber).padStart(3, "0") : String(nextNumber);
+  return `${prefix}-${suffix}`;
 }
 
 function serializeTaskMarkdown(task) {
@@ -371,6 +378,10 @@ function parseTaskMarkdown(content) {
     return null;
   }
 
+  if (!isValidTaskId(id)) {
+    return null;
+  }
+
   if (type !== "user_story" && type !== "bug") {
     return null;
   }
@@ -528,7 +539,7 @@ async function executeTasksUpdate(input) {
       error: { code: "INVALID_PROJECT_NAME", message: "Invalid project name." },
     };
   }
-  if (typeof id !== "string" || id.trim() === "") {
+  if (!isValidTaskId(id)) {
     return {
       ok: false,
       error: { code: "INVALID_TASK_FORMAT", message: "Invalid task id." },
@@ -651,7 +662,7 @@ async function executeTasksPromoteToTodo(input) {
       error: { code: "INVALID_PROJECT_NAME", message: "Invalid project name." },
     };
   }
-  if (typeof id !== "string" || id.trim() === "") {
+  if (!isValidTaskId(id)) {
     return {
       ok: false,
       error: { code: "INVALID_TASK_FORMAT", message: "Invalid task id." },
@@ -738,7 +749,7 @@ async function executeTasksClaim(input) {
       error: { code: "INVALID_PROJECT_NAME", message: "Invalid project name." },
     };
   }
-  if (typeof id !== "string" || id.trim() === "") {
+  if (!isValidTaskId(id)) {
     return {
       ok: false,
       error: { code: "INVALID_TASK_FORMAT", message: "Invalid task id." },
@@ -849,7 +860,7 @@ async function executeTasksDone(input) {
       error: { code: "INVALID_PROJECT_NAME", message: "Invalid project name." },
     };
   }
-  if (typeof id !== "string" || id.trim() === "") {
+  if (!isValidTaskId(id)) {
     return {
       ok: false,
       error: { code: "INVALID_TASK_FORMAT", message: "Invalid task id." },
@@ -949,7 +960,7 @@ async function executeTasksRelease(input) {
       error: { code: "INVALID_PROJECT_NAME", message: "Invalid project name." },
     };
   }
-  if (typeof id !== "string" || id.trim() === "") {
+  if (!isValidTaskId(id)) {
     return {
       ok: false,
       error: { code: "INVALID_TASK_FORMAT", message: "Invalid task id." },
@@ -1049,7 +1060,7 @@ async function executeTasksCancel(input) {
       error: { code: "INVALID_PROJECT_NAME", message: "Invalid project name." },
     };
   }
-  if (typeof id !== "string" || id.trim() === "") {
+  if (!isValidTaskId(id)) {
     return {
       ok: false,
       error: { code: "INVALID_TASK_FORMAT", message: "Invalid task id." },
@@ -1173,6 +1184,14 @@ function validateTaskForRead(task, fileNameId) {
     });
   }
 
+  if (!isValidTaskId(task.id)) {
+    violations.push({
+      code: "INVALID_TASK_ID",
+      message: "Invalid task id.",
+      details: { id: task.id },
+    });
+  }
+
   const createdMs = parseIsoWithOffsetMs(task.created_at);
   if (createdMs === null) {
     violations.push({
@@ -1289,7 +1308,7 @@ async function executeTasksGet(input) {
       error: { code: "INVALID_PROJECT_NAME", message: "Invalid project name." },
     };
   }
-  if (typeof id !== "string" || id.trim() === "") {
+  if (!isValidTaskId(id)) {
     return { ok: false, error: { code: "INVALID_TASK_FORMAT", message: "Invalid task id." } };
   }
 
@@ -1416,7 +1435,7 @@ async function executeTasksHistory(input) {
       error: { code: "INVALID_PROJECT_NAME", message: "Invalid project name." },
     };
   }
-  if (typeof id !== "string" || id.trim() === "") {
+  if (!isValidTaskId(id)) {
     return { ok: false, error: { code: "INVALID_TASK_FORMAT", message: "Invalid task id." } };
   }
 
@@ -1456,7 +1475,7 @@ async function executeTasksRollback(input) {
       error: { code: "INVALID_PROJECT_NAME", message: "Invalid project name." },
     };
   }
-  if (typeof id !== "string" || id.trim() === "") {
+  if (!isValidTaskId(id)) {
     return { ok: false, error: { code: "INVALID_TASK_FORMAT", message: "Invalid task id." } };
   }
   if (typeof revision !== "string" || revision.trim() === "") {

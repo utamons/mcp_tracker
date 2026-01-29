@@ -1,5 +1,6 @@
 import type { TaskStore, TaskEntity } from "../../tasks/TaskStore.js";
 import { TaskValidator } from "../../tasks/TaskValidator.js";
+import { isValidTaskId } from "../../tasks/TaskId.js";
 import { stat } from "node:fs/promises";
 import path from "node:path";
 
@@ -36,7 +37,7 @@ export class TasksGetTool {
         error: { code: "INVALID_PROJECT_NAME", message: "Invalid project name." },
       };
     }
-    if (typeof _input.id !== "string" || _input.id.trim() === "") {
+    if (!isValidTaskId(_input.id)) {
       return {
         ok: false,
         error: { code: "INVALID_TASK_FORMAT", message: "Invalid task id." },

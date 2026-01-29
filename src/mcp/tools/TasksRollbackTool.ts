@@ -1,4 +1,5 @@
 import type { RollbackService, TaskView } from "../../git/RollbackService.js";
+import { isValidTaskId } from "../../tasks/TaskId.js";
 
 export type TasksRollbackInput = {
   project: string;
@@ -20,7 +21,7 @@ export class TasksRollbackTool {
         error: { code: "INVALID_PROJECT_NAME", message: "Invalid project name." },
       };
     }
-    if (typeof _input.id !== "string" || _input.id.trim() === "") {
+    if (!isValidTaskId(_input.id)) {
       return {
         ok: false,
         error: { code: "INVALID_TASK_FORMAT", message: "Invalid task id." },

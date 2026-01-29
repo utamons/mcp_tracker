@@ -1,5 +1,6 @@
 import type { GitCommit } from "../../git/GitPort.js";
 import type { HistoryService } from "../../git/HistoryService.js";
+import { isValidTaskId } from "../../tasks/TaskId.js";
 
 export type TasksHistoryInput = {
   project: string;
@@ -20,7 +21,7 @@ export class TasksHistoryTool {
         error: { code: "INVALID_PROJECT_NAME", message: "Invalid project name." },
       };
     }
-    if (typeof _input.id !== "string" || _input.id.trim() === "") {
+    if (!isValidTaskId(_input.id)) {
       return {
         ok: false,
         error: { code: "INVALID_TASK_FORMAT", message: "Invalid task id." },

@@ -3,6 +3,7 @@ import type { WorktreeGuard } from "../../git/WorktreeGuard.js";
 import type { TaskStatusTransitions } from "../../tasks/TaskStatusTransitions.js";
 import type { TaskStore } from "../../tasks/TaskStore.js";
 import type { WorkflowRules } from "../../tasks/WorkflowRules.js";
+import { isValidTaskId } from "../../tasks/TaskId.js";
 import { stat } from "node:fs/promises";
 import path from "node:path";
 
@@ -42,7 +43,7 @@ export class TasksReleaseTool {
         error: { code: "INVALID_PROJECT_NAME", message: "Invalid project name." },
       };
     }
-    if (typeof _input.id !== "string" || _input.id.trim() === "") {
+    if (!isValidTaskId(_input.id)) {
       return {
         ok: false,
         error: { code: "INVALID_TASK_FORMAT", message: "Invalid task id." },

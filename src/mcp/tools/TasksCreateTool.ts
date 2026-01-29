@@ -81,7 +81,18 @@ export class TasksCreateTool {
       };
     }
 
-    const id = await this._idAllocator.nextId(_input.project);
+    let id: string;
+    try {
+      id = await this._idAllocator.nextId(_input.project);
+    } catch {
+      return {
+        ok: false,
+        error: {
+          code: "IO_ERROR",
+          message: "Failed to allocate task id.",
+        },
+      };
+    }
     const created_at = this._clock.nowIsoWithOffset();
     const status: "backlog" = "backlog";
 
