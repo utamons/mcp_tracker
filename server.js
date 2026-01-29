@@ -48,7 +48,7 @@ function isValidProjectName(name) {
 }
 
 function isValidTaskId(id) {
-  return typeof id === "string" && /^[A-Za-z0-9]+-\d{3,}$/.test(id);
+  return typeof id === "string" && /^[A-Z]{2}-\d{3,}$/.test(id);
 }
 
 const TASK_TEMPLATE_NAME = "TASK_TEMPLATE.md";
