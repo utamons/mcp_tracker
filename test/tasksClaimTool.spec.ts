@@ -169,6 +169,22 @@ describe("Claim_acceptsLongerIds", () => {
   });
 });
 
+describe("Claim_invalidIdFormat", () => {
+  it.each(["FR-01", "FR-abc", "FR-"])("returns INVALID_TASK_FORMAT for %s.", async (id) => {
+    const repoRoot = await createTempDir();
+    await initGitRepo(repoRoot);
+    await mkdir(path.join(repoRoot, "frontend"), { recursive: true });
+
+    const tool = createTool(repoRoot);
+    const response = await tool.execute({ project: "frontend", id });
+
+    expect(response.ok).toBe(false);
+    if (response.ok) return;
+
+    expect(response.error.code).toBe("INVALID_TASK_FORMAT");
+  });
+});
+
 describe("Claim_setsToolWhenProvided", () => {
   it("сохраняет tool при передаче параметра tool.", async () => {
     const repoRoot = await createTempDir();

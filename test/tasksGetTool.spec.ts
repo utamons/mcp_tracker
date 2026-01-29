@@ -72,6 +72,22 @@ describe("TasksGet_acceptsLongerIds", () => {
   });
 });
 
+describe("TasksGet_invalidIdFormat", () => {
+  it.each(["FR-01", "FR-abc", "FR-"])("returns INVALID_TASK_FORMAT for %s.", async (id) => {
+    const repoRoot = await createTempDir();
+    const projectDir = path.join(repoRoot, "frontend");
+    await mkdir(projectDir, { recursive: true });
+
+    const tool = createTool(repoRoot);
+    const response = await tool.execute({ project: "frontend", id });
+
+    expect(response.ok).toBe(false);
+    if (response.ok) return;
+
+    expect(response.error.code).toBe("INVALID_TASK_FORMAT");
+  });
+});
+
 describe("TasksGet_invalidProjectName", () => {
   it("returns INVALID_PROJECT_NAME when project name is invalid.", async () => {
     const repoRoot = await createTempDir();

@@ -167,6 +167,22 @@ describe("Done_acceptsLongerIds", () => {
   });
 });
 
+describe("Done_invalidIdFormat", () => {
+  it.each(["FR-01", "FR-abc", "FR-"])("returns INVALID_TASK_FORMAT for %s.", async (id) => {
+    const repoRoot = await createTempDir();
+    await initGitRepo(repoRoot);
+    await mkdir(path.join(repoRoot, "frontend"), { recursive: true });
+
+    const tool = createTool(repoRoot);
+    const response = await tool.execute({ project: "frontend", id });
+
+    expect(response.ok).toBe(false);
+    if (response.ok) return;
+
+    expect(response.error.code).toBe("INVALID_TASK_FORMAT");
+  });
+});
+
 describe("Done_invalidTransition", () => {
   it("при status≠in_progress возвращает INVALID_STATUS_TRANSITION.", async () => {
     const statuses: Array<"backlog" | "todo" | "done" | "canceled"> = [

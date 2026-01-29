@@ -129,6 +129,26 @@ describe("TasksUpdate_acceptsLongerIds", () => {
   });
 });
 
+describe("TasksUpdate_invalidIdFormat", () => {
+  it.each(["FR-01", "FR-abc", "FR-"])("returns INVALID_TASK_FORMAT for %s.", async (id) => {
+    const repoRoot = await createTempDir();
+    await initGitRepo(repoRoot);
+    await mkdir(path.join(repoRoot, "frontend"), { recursive: true });
+
+    const tool = createTool(repoRoot);
+    const response = await tool.execute({
+      project: "frontend",
+      id,
+      patch: { title: "New title" },
+    });
+
+    expect(response.ok).toBe(false);
+    if (response.ok) return;
+
+    expect(response.error.code).toBe("INVALID_TASK_FORMAT");
+  });
+});
+
 describe("TasksUpdate_nonBacklog_forbidden", () => {
   it("returns FORBIDDEN_UPDATE_IN_STATUS in todo/in_progress/done/canceled.", async () => {
     const statuses: TaskEntity["status"][] = [

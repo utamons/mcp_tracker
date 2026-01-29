@@ -100,6 +100,48 @@ describe("PromoteToTodo_backlogToTodo", () => {
   });
 });
 
+describe("PromoteToTodo_acceptsLongerIds", () => {
+  it.each(["FR-1000", "FR-10000"])("accepts %s.", async (id) => {
+    const repoRoot = await createTempDir();
+    await initGitRepo(repoRoot);
+    await mkdir(path.join(repoRoot, "frontend"), { recursive: true });
+
+    await seedTask(repoRoot, {
+      id,
+      project: "frontend",
+      type: "user_story",
+      title: "My task",
+      status: "backlog",
+      created_at: "2026-01-01T00:00:00+00:00",
+      body: "Hello",
+    });
+
+    const tool = createTool(repoRoot);
+    const response = await tool.execute({ project: "frontend", id });
+
+    expect(response.ok).toBe(true);
+    if (!response.ok) return;
+
+    expect(response.data.id).toBe(id);
+  });
+});
+
+describe("PromoteToTodo_invalidIdFormat", () => {
+  it.each(["FR-01", "FR-abc", "FR-"])("returns INVALID_TASK_FORMAT for %s.", async (id) => {
+    const repoRoot = await createTempDir();
+    await initGitRepo(repoRoot);
+    await mkdir(path.join(repoRoot, "frontend"), { recursive: true });
+
+    const tool = createTool(repoRoot);
+    const response = await tool.execute({ project: "frontend", id });
+
+    expect(response.ok).toBe(false);
+    if (response.ok) return;
+
+    expect(response.error.code).toBe("INVALID_TASK_FORMAT");
+  });
+});
+
 describe("PromoteToTodo_invalidTransition", () => {
   it("returns INVALID_STATUS_TRANSITION when status is not backlog.", async () => {
     const statuses: TaskEntity["status"][] = [
@@ -219,4 +261,3 @@ describe("PromoteToTodo_doesNotChangeBody", () => {
     expect(updated.body).toBe(originalBody);
   });
 });
-
