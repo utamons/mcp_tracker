@@ -38,6 +38,16 @@ or:
 node server.js
 ```
 
+## CLI
+
+List tasks for a project (read-only, no server required):
+
+```bash
+npm run tasks:list -- --project <project>
+```
+
+Output is grouped by `backlog`, `todo`, and `in_progress`, with lines in the form `ID — Title`.
+
 ## Storage layout
 
 The server stores projects under:
