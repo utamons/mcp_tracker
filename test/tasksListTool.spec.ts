@@ -213,8 +213,8 @@ describe("TasksList_textSearch_titleAndBody", () => {
   });
 });
 
-describe("TasksList_ignoresTaskTemplate", () => {
-  it("игнорирует TASK_TEMPLATE.md при чтении задач.", async () => {
+describe("TasksList_ignoresTaskTemplates", () => {
+  it("игнорирует файлы *_TEMPLATE.md при чтении задач.", async () => {
     const repoRoot = await createTempDir();
     const projectDir = path.join(repoRoot, "frontend");
     await mkdir(projectDir, { recursive: true });
@@ -229,7 +229,8 @@ describe("TasksList_ignoresTaskTemplate", () => {
       body: "Body",
     });
 
-    await writeFile(path.join(projectDir, "TASK_TEMPLATE.md"), "template");
+    await writeFile(path.join(projectDir, "STORY_TEMPLATE.md"), "template");
+    await writeFile(path.join(projectDir, "BUG_TEMPLATE.md"), "template");
 
     const tool = createTool(repoRoot);
     const response = await tool.execute({ project: "frontend" });

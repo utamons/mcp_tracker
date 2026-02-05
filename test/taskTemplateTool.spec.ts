@@ -28,16 +28,16 @@ afterEach(async () => {
 });
 
 describe("TaskTemplateTool_returnsTemplateText", () => {
-  it("returns the TASK_TEMPLATE.md content from the project folder.", async () => {
+  it("returns the STORY_TEMPLATE.md content from the project folder.", async () => {
     const repoRoot = await createTempDir();
     const projectDir = path.join(repoRoot, "frontend");
     await mkdir(projectDir, { recursive: true });
 
     const template = "# Task Template\n\n## Description\n";
-    await writeFile(path.join(projectDir, "TASK_TEMPLATE.md"), template, "utf8");
+    await writeFile(path.join(projectDir, "STORY_TEMPLATE.md"), template, "utf8");
 
     const tool = createTool(repoRoot);
-    const response = await tool.execute({ project: "frontend" });
+    const response = await tool.execute({ project: "frontend", type: "story" });
 
     expect(response.ok).toBe(true);
     if (!response.ok) return;
@@ -51,7 +51,7 @@ describe("TaskTemplateTool_invalidProjectName", () => {
     const repoRoot = await createTempDir();
     const tool = createTool(repoRoot);
 
-    const response = await tool.execute({ project: "Front_End" });
+    const response = await tool.execute({ project: "Front_End", type: "story" });
 
     expect(response.ok).toBe(false);
     if (response.ok) return;
@@ -61,12 +61,27 @@ describe("TaskTemplateTool_invalidProjectName", () => {
   });
 });
 
+describe("TaskTemplateTool_invalidTemplateType", () => {
+  it("returns INVALID_TEMPLATE_TYPE for bad template types.", async () => {
+    const repoRoot = await createTempDir();
+    const tool = createTool(repoRoot);
+
+    const response = await tool.execute({ project: "frontend", type: "Story" });
+
+    expect(response.ok).toBe(false);
+    if (response.ok) return;
+
+    expect(response.error.code).toBe("INVALID_TEMPLATE_TYPE");
+    expect(response.error.message).toBe("Invalid template type.");
+  });
+});
+
 describe("TaskTemplateTool_projectNotFound", () => {
   it("returns PROJECT_NOT_FOUND when project folder is missing.", async () => {
     const repoRoot = await createTempDir();
     const tool = createTool(repoRoot);
 
-    const response = await tool.execute({ project: "frontend" });
+    const response = await tool.execute({ project: "frontend", type: "story" });
 
     expect(response.ok).toBe(false);
     if (response.ok) return;
@@ -82,7 +97,7 @@ describe("TaskTemplateTool_templateNotFound", () => {
     await mkdir(path.join(repoRoot, "frontend"), { recursive: true });
 
     const tool = createTool(repoRoot);
-    const response = await tool.execute({ project: "frontend" });
+    const response = await tool.execute({ project: "frontend", type: "bug" });
 
     expect(response.ok).toBe(false);
     if (response.ok) return;
@@ -97,10 +112,10 @@ describe("TaskTemplateTool_ioError", () => {
     const repoRoot = await createTempDir();
     const projectDir = path.join(repoRoot, "frontend");
     await mkdir(projectDir, { recursive: true });
-    await mkdir(path.join(projectDir, "TASK_TEMPLATE.md"));
+    await mkdir(path.join(projectDir, "BUG_TEMPLATE.md"));
 
     const tool = createTool(repoRoot);
-    const response = await tool.execute({ project: "frontend" });
+    const response = await tool.execute({ project: "frontend", type: "bug" });
 
     expect(response.ok).toBe(false);
     if (response.ok) return;

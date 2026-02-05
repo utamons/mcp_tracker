@@ -81,8 +81,8 @@ describe("Verify_acceptsLongerIds", () => {
   });
 });
 
-describe("Verify_ignoresTaskTemplate", () => {
-  it("ignores TASK_TEMPLATE.md when verifying tasks.", async () => {
+describe("Verify_ignoresTaskTemplates", () => {
+  it("ignores *_TEMPLATE.md when verifying tasks.", async () => {
     const repoRoot = await createTempDir();
     const projectDir = path.join(repoRoot, "frontend");
     await mkdir(projectDir, { recursive: true });
@@ -92,7 +92,12 @@ describe("Verify_ignoresTaskTemplate", () => {
       "utf8",
     );
     await writeFile(
-      path.join(projectDir, "TASK_TEMPLATE.md"),
+      path.join(projectDir, "STORY_TEMPLATE.md"),
+      "# Task Template\n\n## Description\n",
+      "utf8",
+    );
+    await writeFile(
+      path.join(projectDir, "BUG_TEMPLATE.md"),
       "# Task Template\n\n## Description\n",
       "utf8",
     );

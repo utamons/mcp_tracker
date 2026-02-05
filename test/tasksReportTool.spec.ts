@@ -122,8 +122,8 @@ describe("Report_countsDoneInRange_inclusive", () => {
   });
 });
 
-describe("Report_ignoresTaskTemplate", () => {
-  it("ignores TASK_TEMPLATE.md when building the report.", async () => {
+describe("Report_ignoresTaskTemplates", () => {
+  it("ignores *_TEMPLATE.md when building the report.", async () => {
     const repoRoot = await createTempDir();
     const projectDir = path.join(repoRoot, "frontend");
     await mkdir(projectDir, { recursive: true });
@@ -143,7 +143,12 @@ describe("Report_ignoresTaskTemplate", () => {
     );
 
     await writeFile(
-      path.join(projectDir, "TASK_TEMPLATE.md"),
+      path.join(projectDir, "STORY_TEMPLATE.md"),
+      "# Task Template\n\n## Description\n",
+      "utf8",
+    );
+    await writeFile(
+      path.join(projectDir, "BUG_TEMPLATE.md"),
       "# Task Template\n\n## Description\n",
       "utf8",
     );
