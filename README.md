@@ -66,7 +66,7 @@ npm run tasks:list -- --project ta-backend
 backlog:
 todo:
 in_progress:
-TB-065 — Example task title in English
+TB-065 — Example task title
 ```
 
 Show task details (metadata + body):
@@ -87,7 +87,7 @@ npm run tasks:get -- --project ta-backend --id TB-065
 id: TB-065
 project: ta-backend
 type: user_story
-title: Example task title in English
+title: Example task title
 status: in_progress
 created_at: 2026-01-21T10:00:00+00:00
 started_at: 2026-01-21T10:05:00+00:00
