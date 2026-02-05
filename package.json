@@ -7,7 +7,7 @@
     "start": "node server.js",
     "test": "vitest run",
     "test:watch": "vitest",
-    "tasks:list": "node --experimental-strip-types src/cli/tasks-list.ts"
+    "tasks:list": "node src/cli/tasks-list.js"
   },
   "devDependencies": {
     "typescript": "^5.3.3",
