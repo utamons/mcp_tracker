@@ -46,6 +46,7 @@ Capabilities:
 - Reads tasks from `~/.mcp_tracker/projects/<project>`
 - Groups output by `backlog`, `todo`, and `in_progress`
 - Does not perform Git writes or interact with active MCP sessions
+- Shows a single task's metadata and body by project and ID
 
 List tasks for a project:
 
@@ -65,7 +66,34 @@ npm run tasks:list -- --project ta-backend
 backlog:
 todo:
 in_progress:
-TB-065 — Example task title
+TB-065 — Example task title in English
+```
+
+Show task details (metadata + body):
+
+```bash
+npm run tasks:get -- --project <project> --id <ID>
+```
+
+Output prints `field: value` pairs, followed by a blank line and the task body (if present).
+
+Example:
+
+```bash
+npm run tasks:get -- --project ta-backend --id TB-065
+```
+
+```text
+id: TB-065
+project: ta-backend
+type: user_story
+title: Example task title in English
+status: in_progress
+created_at: 2026-01-21T10:00:00+00:00
+started_at: 2026-01-21T10:05:00+00:00
+tool: codex
+
+Task body content...
 ```
 
 ## Storage layout
