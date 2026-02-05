@@ -2,6 +2,7 @@ import type { TaskTemplateStore } from "../../tasks/TaskTemplateStore.js";
 
 export type TaskTemplateInput = {
   project: string;
+  type: string;
 };
 
 export type TaskTemplateResponse =
@@ -18,9 +19,15 @@ export class TaskTemplateTool {
         error: { code: "INVALID_PROJECT_NAME", message: "Invalid project name." },
       };
     }
+    if (!isValidTemplateType(_input.type)) {
+      return {
+        ok: false,
+        error: { code: "INVALID_TEMPLATE_TYPE", message: "Invalid template type." },
+      };
+    }
 
     try {
-      const template = await this._store.read(_input.project);
+      const template = await this._store.read(_input.project, _input.type);
       return { ok: true, data: { template } };
     } catch (error) {
       const code =
@@ -51,4 +58,8 @@ export class TaskTemplateTool {
 
 function isValidProjectName(name: string): boolean {
   return /^[a-z0-9-]+$/.test(name);
+}
+
+function isValidTemplateType(type: string): boolean {
+  return /^[a-z0-9_-]+$/.test(type);
 }

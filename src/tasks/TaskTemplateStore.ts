@@ -1,11 +1,12 @@
 import type { Config } from "../config/Config.js";
 import { readFile, stat } from "node:fs/promises";
 import path from "node:path";
+import { templateFileName } from "./TaskFiles.js";
 
 export class TaskTemplateStore {
   constructor(private readonly _config: Config) {}
 
-  async read(_project: string): Promise<string> {
+  async read(_project: string, _type: string): Promise<string> {
     const projectDir = path.join(this._config.getRepoRoot(), _project);
     try {
       const info = await stat(projectDir);
@@ -31,7 +32,7 @@ export class TaskTemplateStore {
       throw io;
     }
 
-    const templatePath = path.join(projectDir, "TASK_TEMPLATE.md");
+    const templatePath = path.join(projectDir, templateFileName(_type));
     try {
       return await readFile(templatePath, "utf8");
     } catch (error) {

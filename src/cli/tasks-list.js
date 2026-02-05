@@ -4,7 +4,7 @@ import { fileURLToPath } from "node:url";
 import { readdir, readFile } from "node:fs/promises";
 
 const DEFAULT_REPO_ROOT = path.join(os.homedir(), ".mcp_tracker", "projects");
-const TASK_TEMPLATE_NAME = "TASK_TEMPLATE.md";
+const TASK_TEMPLATE_SUFFIX = "_TEMPLATE.md";
 const STATUSES = ["backlog", "todo", "in_progress"];
 const TASK_ID_REGEX = /^[A-Z]{2}-\d{3,}$/;
 
@@ -19,7 +19,7 @@ function isValidProjectName(name) {
 }
 
 function isTaskMarkdownFile(name) {
-  return name.endsWith(".md") && name !== TASK_TEMPLATE_NAME;
+  return name.endsWith(".md") && !name.endsWith(TASK_TEMPLATE_SUFFIX);
 }
 
 function parseTask(markdown) {

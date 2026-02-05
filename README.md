@@ -197,10 +197,18 @@ Lists valid projects (directories) under `~/.mcp_tracker/projects`.
 
 ### `tasks.template`
 
-Reads the `TASK_TEMPLATE.md` file from the project directory.
+Reads a task template file from the project directory based on the `type` input.
 
 - Input:
   - `project` (string): must match `^[a-z0-9-]+$` and the directory must exist
+  - `type` (string): must match `^[a-z0-9_-]+$` (e.g., `story` -> `STORY_TEMPLATE.md`)
+- File selection:
+  - The tool looks for `PROJECT_DIR/[TYPE]_TEMPLATE.md` where `[TYPE]` is the uppercased `type` value.
+  - Example: `type: "bug"` -> `BUG_TEMPLATE.md`, `type: "story"` -> `STORY_TEMPLATE.md`.
+- Valid types are determined by the `*_TEMPLATE.md` filenames present in the project directory.
+- Errors:
+  - `INVALID_TEMPLATE_TYPE` when `type` does not match `^[a-z0-9_-]+$`.
+  - `TASK_TEMPLATE_NOT_FOUND` when the expected `*_TEMPLATE.md` file is missing.
 - Output: `{ ok: true, data: { template: string } }`
 
 ### `tasks.create`

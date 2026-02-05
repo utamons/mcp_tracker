@@ -51,10 +51,18 @@ function isValidTaskId(id) {
   return typeof id === "string" && /^[A-Z]{2}-\d{3,}$/.test(id);
 }
 
-const TASK_TEMPLATE_NAME = "TASK_TEMPLATE.md";
+const TASK_TEMPLATE_SUFFIX = "_TEMPLATE.md";
 
 function isTaskMarkdownFile(name) {
-  return name.endsWith(".md") && name !== TASK_TEMPLATE_NAME;
+  return name.endsWith(".md") && !name.endsWith(TASK_TEMPLATE_SUFFIX);
+}
+
+function isValidTemplateType(type) {
+  return typeof type === "string" && /^[a-z0-9_-]+$/.test(type);
+}
+
+function templateFileName(type) {
+  return `${type.toUpperCase()}${TASK_TEMPLATE_SUFFIX}`;
 }
 
 function nowIsoWithOffset() {
@@ -199,11 +207,18 @@ async function executeProjectsList() {
 
 async function executeTaskTemplate(input) {
   const project = input?.project;
+  const type = input?.type;
 
   if (typeof project !== "string" || !isValidProjectName(project)) {
     return {
       ok: false,
       error: { code: "INVALID_PROJECT_NAME", message: "Invalid project name." },
+    };
+  }
+  if (!isValidTemplateType(type)) {
+    return {
+      ok: false,
+      error: { code: "INVALID_TEMPLATE_TYPE", message: "Invalid template type." },
     };
   }
 
@@ -233,7 +248,7 @@ async function executeTaskTemplate(input) {
     };
   }
 
-  const templatePath = path.join(projectDir, "TASK_TEMPLATE.md");
+  const templatePath = path.join(projectDir, templateFileName(type));
   try {
     const template = await readFile(templatePath, "utf8");
     return { ok: true, data: { template } };
@@ -1628,7 +1643,7 @@ const tools = [
   {
     name: "tasks.template",
     title: "Task template",
-    inputSchema: z.object({ project: z.string() }).strict(),
+    inputSchema: z.object({ project: z.string(), type: z.string() }).strict(),
   },
   {
     name: "tasks.create",
