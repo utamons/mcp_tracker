@@ -65,7 +65,7 @@ npm run tasks:list -- --project ta-backend
 backlog:
 todo:
 in_progress:
-TB-065 — Example task title
+TB-065 — Example task title in English
 ```
 
 ## Storage layout
