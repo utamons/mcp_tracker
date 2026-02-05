@@ -1,8 +1,8 @@
 import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { Config } from "../config/Config.js";
-import { TaskStore, type TaskEntity } from "../tasks/TaskStore.js";
+import { Config } from "../config/Config.ts";
+import { TaskStore, type TaskEntity } from "../tasks/TaskStore.ts";
 
 export type TasksListResult =
   | { ok: true; output: string }
