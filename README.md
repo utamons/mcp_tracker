@@ -40,13 +40,33 @@ node server.js
 
 ## CLI
 
-List tasks for a project (read-only, no server required):
+The CLI provides read-only access to project task lists without starting the MCP server.
+
+Capabilities:
+- Reads tasks from `~/.mcp_tracker/projects/<project>`
+- Groups output by `backlog`, `todo`, and `in_progress`
+- Does not perform Git writes or interact with active MCP sessions
+
+List tasks for a project:
 
 ```bash
 npm run tasks:list -- --project <project>
 ```
 
 Output is grouped by `backlog`, `todo`, and `in_progress`, with lines in the form `ID — Title`.
+
+Example:
+
+```bash
+npm run tasks:list -- --project ta-backend
+```
+
+```text
+backlog:
+todo:
+in_progress:
+TB-065 — Example task title
+```
 
 ## Storage layout
 
