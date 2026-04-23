@@ -104,11 +104,15 @@ npm run tasks:import -- --project <project> --file <path/to/task.md>
 
 The file must start with frontmatter containing `title` and `type`.
 The created task body is copied from the Markdown content after frontmatter.
+If frontmatter contains `id`, the imported task title is prefixed with that value
+unless the title already contains it. The import accepts `story` as an alias for
+`user_story`.
 
 ```md
 ---
-title: "Imported task"
-type: review
+id: DM-XCRT-006
+title: "Зональный трейл `F1/F2/F3`"
+type: story
 ---
 ## Description
 

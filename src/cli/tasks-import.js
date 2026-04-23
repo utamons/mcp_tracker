@@ -8,6 +8,7 @@ import { promisify } from "node:util";
 const execFileAsync = promisify(execFile);
 const DEFAULT_REPO_ROOT = path.join(os.homedir(), ".mcp_tracker", "projects");
 const TASK_TYPES = new Set(["user_story", "bug", "review"]);
+const TASK_TYPE_ALIASES = new Map([["story", "user_story"]]);
 
 function error(code, message) {
   return { ok: false, error: { code, message } };
@@ -32,6 +33,24 @@ function parseFrontmatterValue(value) {
 
 function invalidImportFormat() {
   return error("INVALID_IMPORT_FORMAT", "Invalid import file format.");
+}
+
+function normalizeTaskType(type) {
+  return TASK_TYPE_ALIASES.get(type) ?? type;
+}
+
+function titleWithOptionalExternalId(title, externalId) {
+  const normalizedTitle = title.trim();
+  if (typeof externalId !== "string" || externalId.trim() === "") {
+    return normalizedTitle;
+  }
+
+  const normalizedId = externalId.trim();
+  if (normalizedTitle.includes(normalizedId)) {
+    return normalizedTitle;
+  }
+
+  return `${normalizedId} ${normalizedTitle}`;
 }
 
 export function parseImportMarkdown(markdown) {
@@ -66,15 +85,16 @@ export function parseImportMarkdown(markdown) {
   if (typeof header.title !== "string" || header.title.trim() === "") {
     return invalidImportFormat();
   }
-  if (typeof header.type !== "string" || !TASK_TYPES.has(header.type)) {
+  const type = typeof header.type === "string" ? normalizeTaskType(header.type) : undefined;
+  if (typeof type !== "string" || !TASK_TYPES.has(type)) {
     return invalidImportFormat();
   }
 
   return {
     ok: true,
     data: {
-      title: header.title,
-      type: header.type,
+      title: titleWithOptionalExternalId(header.title, header.id),
+      type,
       body: lines.slice(index + 1).join("\n").trimEnd(),
     },
   };
