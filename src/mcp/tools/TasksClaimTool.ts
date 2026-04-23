@@ -4,6 +4,7 @@ import type { Clock } from "../../infra/Clock.js";
 import type { TaskStatusTransitions } from "../../tasks/TaskStatusTransitions.js";
 import type { TaskStore } from "../../tasks/TaskStore.js";
 import type { WorkflowRules } from "../../tasks/WorkflowRules.js";
+import type { TaskType } from "../../tasks/TaskType.js";
 import { isValidTaskId } from "../../tasks/TaskId.js";
 import { stat } from "node:fs/promises";
 import path from "node:path";
@@ -17,7 +18,7 @@ export type TasksClaimInput = {
 export type TaskView = {
   id: string;
   project: string;
-  type: "user_story" | "bug";
+  type: TaskType;
   title: string;
   status: "backlog" | "todo" | "in_progress" | "done" | "canceled";
   created_at: string;

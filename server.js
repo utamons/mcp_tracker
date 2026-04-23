@@ -52,6 +52,8 @@ function isValidTaskId(id) {
 }
 
 const TASK_TEMPLATE_SUFFIX = "_TEMPLATE.md";
+const TASK_TYPES = ["user_story", "bug", "review"];
+const TASK_TYPE_SET = new Set(TASK_TYPES);
 
 function isTaskMarkdownFile(name) {
   return name.endsWith(".md") && !name.endsWith(TASK_TEMPLATE_SUFFIX);
@@ -285,7 +287,7 @@ async function executeTasksCreate(input) {
       error: { code: "INVALID_PROJECT_NAME", message: "Invalid project name." },
     };
   }
-  if (type !== "user_story" && type !== "bug") {
+  if (!TASK_TYPE_SET.has(type)) {
     return {
       ok: false,
       error: { code: "INVALID_TASK_FORMAT", message: "Invalid task type." },
@@ -397,7 +399,7 @@ function parseTaskMarkdown(content) {
     return null;
   }
 
-  if (type !== "user_story" && type !== "bug") {
+  if (!TASK_TYPE_SET.has(type)) {
     return null;
   }
 
@@ -483,7 +485,7 @@ async function executeTasksList(input) {
     };
   }
 
-  const allowedTypes = ["user_story", "bug"];
+  const allowedTypes = TASK_TYPES;
   if (typeof type !== "undefined" && !allowedTypes.includes(type)) {
     return {
       ok: false,
@@ -616,7 +618,7 @@ async function executeTasksUpdate(input) {
 
   const next = { ...task };
   if (patch.type !== undefined) {
-    if (patch.type !== "user_story" && patch.type !== "bug") {
+    if (!TASK_TYPE_SET.has(patch.type)) {
       return {
         ok: false,
         error: { code: "INVALID_TASK_FORMAT", message: "Invalid task type." },
@@ -1651,7 +1653,7 @@ const tools = [
     inputSchema: z
       .object({
         project: z.string(),
-        type: z.enum(["user_story", "bug"]),
+        type: z.enum(TASK_TYPES),
         title: z.string(),
         body: z.string().optional(),
       })
@@ -1671,7 +1673,7 @@ const tools = [
         id: z.string(),
         patch: z
           .object({
-            type: z.enum(["user_story", "bug"]).optional(),
+            type: z.enum(TASK_TYPES).optional(),
             title: z.string().optional(),
             body: z.string().optional(),
           })
@@ -1715,7 +1717,7 @@ const tools = [
         status: z
           .enum(["backlog", "todo", "in_progress", "done", "canceled"])
           .optional(),
-        type: z.enum(["user_story", "bug"]).optional(),
+        type: z.enum(TASK_TYPES).optional(),
         text: z.string().optional(),
       })
       .strict(),

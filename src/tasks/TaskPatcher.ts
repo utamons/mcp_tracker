@@ -1,4 +1,5 @@
 import type { TaskEntity } from "./TaskStore.js";
+import { isValidTaskType } from "./TaskType.js";
 
 export type TaskPatch = {
   type?: TaskEntity["type"];
@@ -17,7 +18,7 @@ export class TaskPatcher {
     const next: TaskEntity = { ...task };
 
     if (patch.type !== undefined) {
-      if (patch.type !== "user_story" && patch.type !== "bug") {
+      if (!isValidTaskType(patch.type)) {
         const error = new Error("Invalid task type.");
         (error as unknown as { code: string }).code = "INVALID_TASK_FORMAT";
         throw error;

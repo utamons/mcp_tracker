@@ -1,4 +1,5 @@
 import type { TaskStore, TaskEntity } from "../../tasks/TaskStore.js";
+import type { TaskType } from "../../tasks/TaskType.js";
 import { TaskValidator } from "../../tasks/TaskValidator.js";
 import { isValidTaskId } from "../../tasks/TaskId.js";
 import { stat } from "node:fs/promises";
@@ -12,7 +13,7 @@ export type TasksGetInput = {
 export type TaskDetails = {
   id: string;
   project: string;
-  type: "user_story" | "bug";
+  type: TaskType;
   title: string;
   status: "backlog" | "todo" | "in_progress" | "done" | "canceled";
   created_at: string;

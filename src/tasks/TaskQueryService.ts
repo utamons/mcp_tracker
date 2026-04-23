@@ -1,10 +1,11 @@
 import type { TaskStore, TaskEntity } from "./TaskStore.js";
 import type { TaskTextSearch } from "./TaskTextSearch.js";
+import type { TaskType } from "./TaskType.js";
 
 export type TaskView = {
   id: string;
   project: string;
-  type: "user_story" | "bug";
+  type: TaskType;
   title: string;
   status: "backlog" | "todo" | "in_progress" | "done" | "canceled";
   created_at: string;

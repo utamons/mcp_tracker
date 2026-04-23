@@ -8,7 +8,8 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "tasks:list": "node src/cli/tasks-list.js",
-    "tasks:get": "node src/cli/tasks-get.js"
+    "tasks:get": "node src/cli/tasks-get.js",
+    "tasks:import": "node src/cli/tasks-import.js"
   },
   "devDependencies": {
     "typescript": "^5.3.3",

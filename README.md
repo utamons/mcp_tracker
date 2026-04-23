@@ -40,13 +40,13 @@ node server.js
 
 ## CLI
 
-The CLI provides read-only access to project task lists without starting the MCP server.
+The CLI provides access to project task lists without starting the MCP server.
 
 Capabilities:
 - Reads tasks from `~/.mcp_tracker/projects/<project>`
 - Groups output by `backlog`, `todo`, and `in_progress`
-- Does not perform Git writes or interact with active MCP sessions
 - Shows a single task's metadata and body by project and ID
+- Imports a task from a Markdown file and creates a Git commit
 
 List tasks for a project:
 
@@ -92,6 +92,25 @@ status: in_progress
 created_at: 2026-01-21T10:00:00+00:00
 started_at: 2026-01-21T10:05:00+00:00
 tool: codex
+
+Task body content...
+```
+
+Import a task from a Markdown file with frontmatter:
+
+```bash
+npm run tasks:import -- --project <project> --file <path/to/task.md>
+```
+
+The file must start with frontmatter containing `title` and `type`.
+The created task body is copied from the Markdown content after frontmatter.
+
+```md
+---
+title: "Imported task"
+type: review
+---
+## Description
 
 Task body content...
 ```
@@ -217,7 +236,7 @@ Creates a task file in a project directory and commits the change.
 
 - Input:
   - `project` (string): must match `^[a-z0-9-]+$` and the directory must exist
-  - `type` (enum): `user_story` | `bug`
+  - `type` (enum): `user_story` | `bug` | `review`
   - `title` (string): non-empty
   - `body` (string, optional)
 - Output: `{ ok: true, data: { id, project, type, title, status, created_at } }`
@@ -232,7 +251,7 @@ Updates an existing task and commits the change.
   - `project` (string): must match `^[a-z0-9-]+$` and the directory must exist
   - `id` (string): task ID (also the filename without `.md`), must match `^[A-Z0-9-]+$`
   - `patch` (object):
-    - `type` (optional enum): `user_story` | `bug`
+    - `type` (optional enum): `user_story` | `bug` | `review`
     - `title` (optional string): non-empty
     - `body` (optional string): `""` clears the body
 - Rules:
@@ -302,7 +321,7 @@ Lists tasks for a project with optional filtering.
 - Input:
   - `project` (string): must match `^[a-z0-9-]+$` and the directory must exist
   - `status` (optional enum): `backlog` | `todo` | `in_progress` | `done` | `canceled`
-  - `type` (optional enum): `user_story` | `bug`
+  - `type` (optional enum): `user_story` | `bug` | `review`
   - `text` (optional string): case-insensitive substring match against `title` and `body`
 - Output: `{ ok: true, data: { tasks: TaskView[] } }`
 - `TaskView`:

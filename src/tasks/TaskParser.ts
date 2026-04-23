@@ -1,4 +1,5 @@
 import type { TaskEntity } from "./TaskStore.js";
+import { isValidTaskType } from "./TaskType.js";
 
 function yamlString(value: string): string {
   const escaped = value.replaceAll("\\", "\\\\").replaceAll('"', '\\"');
@@ -53,7 +54,7 @@ export function parseTask(markdown: string): TaskEntity {
     throw error;
   }
 
-  if (type !== "user_story" && type !== "bug") {
+  if (!isValidTaskType(type)) {
     const error = new Error("Invalid task format.");
     (error as unknown as { code: string }).code = "INVALID_TASK_FORMAT";
     throw error;
@@ -141,4 +142,3 @@ export function serializeTask(task: TaskEntity): string {
   const body = task.body ? `${task.body.trimEnd()}\n` : "";
   return `${lines.join("\n")}\n${body}`;
 }
-

@@ -1,13 +1,14 @@
 import type { GitPort } from "./GitPort.js";
 import type { WorktreeGuard } from "./WorktreeGuard.js";
 import type { TaskStore } from "../tasks/TaskStore.js";
+import type { TaskType } from "../tasks/TaskType.js";
 import { stat } from "node:fs/promises";
 import path from "node:path";
 
 export type TaskView = {
   id: string;
   project: string;
-  type: "user_story" | "bug";
+  type: TaskType;
   title: string;
   status: "backlog" | "todo" | "in_progress" | "done" | "canceled";
   created_at: string;

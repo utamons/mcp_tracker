@@ -4,11 +4,12 @@ import path from "node:path";
 import { parseTask, serializeTask } from "./TaskParser.js";
 import { isValidTaskId } from "./TaskId.js";
 import { isTaskMarkdownFile } from "./TaskFiles.js";
+import type { TaskType } from "./TaskType.js";
 
 export type TaskEntity = {
   id: string;
   project: string;
-  type: "user_story" | "bug";
+  type: TaskType;
   title: string;
   status: "backlog" | "todo" | "in_progress" | "done" | "canceled";
   created_at: string;

@@ -5,6 +5,7 @@ import { readFile } from "node:fs/promises";
 
 const DEFAULT_REPO_ROOT = path.join(os.homedir(), ".mcp_tracker", "projects");
 const TASK_ID_REGEX = /^[A-Z]{2}-\d{3,}$/;
+const TASK_TYPES = new Set(["user_story", "bug", "review"]);
 const STATUS_SET = new Set([
   "backlog",
   "todo",
@@ -67,7 +68,7 @@ function parseTask(markdown) {
     throw invalidTaskFormat();
   }
 
-  if (type !== "user_story" && type !== "bug") {
+  if (!TASK_TYPES.has(type)) {
     throw invalidTaskFormat();
   }
 

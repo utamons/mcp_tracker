@@ -1,9 +1,10 @@
 import type { TaskQueryService, TaskView } from "../../tasks/TaskQueryService.js";
+import { isValidTaskType, type TaskType } from "../../tasks/TaskType.js";
 
 export type TasksListInput = {
   project: string;
   status?: "backlog" | "todo" | "in_progress" | "done" | "canceled";
-  type?: "user_story" | "bug";
+  type?: TaskType;
   text?: string;
 };
 
@@ -93,5 +94,5 @@ function isValidStatus(
 function isValidType(
   type: TasksListInput["type"],
 ): type is NonNullable<TasksListInput["type"]> {
-  return type === "user_story" || type === "bug";
+  return isValidTaskType(type);
 }
