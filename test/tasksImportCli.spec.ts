@@ -83,6 +83,84 @@ describe("tasksImportCli_success", () => {
     expect(taskFile).not.toContain("---\ntitle:");
     expect(taskFile).toContain("## Description\n\nImported body.");
   });
+
+  it("prefixes title with frontmatter id when title does not contain it.", async () => {
+    const repoRoot = await createTempDir();
+    await initGitRepo(repoRoot);
+    await mkdir(path.join(repoRoot, "desktop-manager"), { recursive: true });
+
+    const filePath = path.join(repoRoot, "input.md");
+    await writeFile(
+      filePath,
+      [
+        "---",
+        "id: DM-XCRT-006",
+        "type: story",
+        "title: Зональный трейл `F1/F2/F3`",
+        "---",
+        "Body.",
+        "",
+      ].join("\n"),
+      "utf8",
+    );
+
+    const response = await buildTaskImport({
+      project: "desktop-manager",
+      filePath,
+      repoRoot,
+    });
+
+    expect(response.ok).toBe(true);
+    if (!response.ok) return;
+
+    expect(response.data.title).toBe("DM-XCRT-006 Зональный трейл `F1/F2/F3`");
+
+    const taskFile = await readFile(
+      path.join(repoRoot, "desktop-manager", "DM-001.md"),
+      "utf8",
+    );
+    expect(taskFile).toContain('type: user_story');
+    expect(taskFile).toContain('title: "DM-XCRT-006 Зональный трейл `F1/F2/F3`"');
+  });
+
+  it("does not duplicate frontmatter id when title already contains it.", async () => {
+    const repoRoot = await createTempDir();
+    await initGitRepo(repoRoot);
+    await mkdir(path.join(repoRoot, "desktop-manager"), { recursive: true });
+
+    const filePath = path.join(repoRoot, "input.md");
+    await writeFile(
+      filePath,
+      [
+        "---",
+        "id: DM-XCRT-006",
+        "type: story",
+        "title: DM-XCRT-006 Зональный трейл `F1/F2/F3`",
+        "---",
+        "Body.",
+        "",
+      ].join("\n"),
+      "utf8",
+    );
+
+    const response = await buildTaskImport({
+      project: "desktop-manager",
+      filePath,
+      repoRoot,
+    });
+
+    expect(response.ok).toBe(true);
+    if (!response.ok) return;
+
+    expect(response.data.title).toBe("DM-XCRT-006 Зональный трейл `F1/F2/F3`");
+
+    const taskFile = await readFile(
+      path.join(repoRoot, "desktop-manager", "DM-001.md"),
+      "utf8",
+    );
+    expect(taskFile).toContain('title: "DM-XCRT-006 Зональный трейл `F1/F2/F3`"');
+    expect(taskFile).not.toContain("DM-XCRT-006 DM-XCRT-006");
+  });
 });
 
 describe("tasksImportCli_errors", () => {
