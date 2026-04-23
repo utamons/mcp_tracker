@@ -75,6 +75,32 @@ describe("tasksGetCli_output", () => {
     expect(response.output.trimEnd()).toBe(expected);
   });
 
+  it("выводит задачу с type=review.", async () => {
+    const repoRoot = await createTempDir();
+    await mkdir(path.join(repoRoot, "frontend"), { recursive: true });
+
+    const store = new TaskStore(new Config(repoRoot));
+    await seedTask(store, {
+      id: "FR-003",
+      type: "review",
+      title: "Review task",
+      status: "backlog",
+      created_at: "2026-01-21T12:00:00+00:00",
+    } as any);
+
+    const response = await buildTaskDetails({
+      project: "frontend",
+      id: "FR-003",
+      repoRoot,
+    });
+
+    expect(response.ok).toBe(true);
+    if (!response.ok) return;
+
+    expect(response.output).toContain("type: review");
+    expect(response.output).toContain("title: Review task");
+  });
+
   it("выводит только метаданные, если body отсутствует.", async () => {
     const repoRoot = await createTempDir();
     await mkdir(path.join(repoRoot, "frontend"), { recursive: true });

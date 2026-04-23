@@ -95,6 +95,38 @@ describe("TasksUpdate_backlog_allowsTypeTitleBody", () => {
     expect(file).toContain("New title");
     expect(file).toContain("New body");
   });
+
+  it("allows updating type to review when status=backlog.", async () => {
+    const repoRoot = await createTempDir();
+    await initGitRepo(repoRoot);
+    await mkdir(path.join(repoRoot, "frontend"), { recursive: true });
+
+    await seedTask(repoRoot, {
+      id: "FR-001",
+      project: "frontend",
+      type: "bug",
+      title: "Old title",
+      status: "backlog",
+      created_at: "2026-01-01T00:00:00+00:00",
+      body: "Old body",
+    });
+
+    const tool = createTool(repoRoot);
+    const response = await tool.execute({
+      project: "frontend",
+      id: "FR-001",
+      patch: { type: "review" },
+    } as any);
+
+    expect(response.ok).toBe(true);
+    if (!response.ok) return;
+
+    expect(response.data.type).toBe("review");
+
+    const taskPath = path.join(repoRoot, "frontend", "FR-001.md");
+    const file = await readFile(taskPath, "utf8");
+    expect(file).toMatch(/\ntype:\s*review\n/);
+  });
 });
 
 describe("TasksUpdate_acceptsLongerIds", () => {

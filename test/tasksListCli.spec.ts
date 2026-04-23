@@ -95,6 +95,27 @@ describe("tasksListCli_output", () => {
     expect(response.output.trimEnd()).toBe(expected);
   });
 
+  it("выводит задачу с type=review.", async () => {
+    const repoRoot = await createTempDir();
+    await mkdir(path.join(repoRoot, "frontend"), { recursive: true });
+
+    const store = new TaskStore(new Config(repoRoot));
+    await seedTask(store, {
+      id: "FR-001",
+      type: "review",
+      title: "Review task",
+      status: "todo",
+      created_at: "2026-01-21T10:01:00+00:00",
+    } as any);
+
+    const response = await buildTasksList({ project: "frontend", repoRoot });
+
+    expect(response.ok).toBe(true);
+    if (!response.ok) return;
+
+    expect(response.output).toContain("FR-001 \u2014 Review task");
+  });
+
   it("печатает заголовки статусов даже если список пуст.", async () => {
     const repoRoot = await createTempDir();
     await mkdir(path.join(repoRoot, "frontend"), { recursive: true });

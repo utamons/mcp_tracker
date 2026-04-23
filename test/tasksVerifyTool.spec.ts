@@ -53,6 +53,25 @@ describe("Verify_validProject_noViolations", () => {
 
     expect(response.data.violations).toEqual([]);
   });
+
+  it("returns an empty violations list for a task with review type.", async () => {
+    const repoRoot = await createTempDir();
+    const projectDir = path.join(repoRoot, "frontend");
+    await mkdir(projectDir, { recursive: true });
+    await writeFile(
+      path.join(projectDir, "FR-001.md"),
+      "---\nid: FR-001\nproject: frontend\ntype: review\ntitle: \"A\"\nstatus: backlog\ncreated_at: 2026-01-01T00:00:00+00:00\n---\n",
+      "utf8",
+    );
+
+    const tool = createTool(repoRoot);
+    const response = await tool.execute({ project: "frontend" });
+
+    expect(response.ok).toBe(true);
+    if (!response.ok) return;
+
+    expect(response.data.violations).toEqual([]);
+  });
 });
 
 describe("Verify_acceptsLongerIds", () => {

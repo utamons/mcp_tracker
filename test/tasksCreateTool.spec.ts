@@ -84,6 +84,31 @@ describe("TasksCreate_createsFileWithFrontmatter", () => {
     expect(file).toContain("## Description");
     expect(file).toContain("Hello");
   });
+
+  it("creates a task with review type that can be read back from storage.", async () => {
+    const repoRoot = await createTempDir();
+    await initGitRepo(repoRoot);
+    await mkdir(path.join(repoRoot, "frontend"), { recursive: true });
+
+    const tool = createTool(repoRoot);
+    const response = await tool.execute({
+      project: "frontend",
+      type: "review",
+      title: "Review implementation",
+      body: "Check the changes",
+    } as any);
+
+    expect(response.ok).toBe(true);
+    if (!response.ok) return;
+    expect(response.data.type).toBe("review");
+
+    const store = new TaskStore(new Config(repoRoot));
+    const task = await store.read("frontend", response.data.id);
+
+    expect(task.type).toBe("review");
+    expect(task.title).toBe("Review implementation");
+    expect(task.body).toBe("Check the changes");
+  });
 });
 
 describe("TasksCreate_allocatesNextId_emptyProject", () => {

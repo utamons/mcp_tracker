@@ -175,6 +175,41 @@ describe("TasksList_filterByType", () => {
 
     expect(response.data.tasks.map((t) => t.id)).toEqual(["FR-002"]);
   });
+
+  it("с type=review возвращает только review-задачи.", async () => {
+    const repoRoot = await createTempDir();
+    await mkdir(path.join(repoRoot, "frontend"), { recursive: true });
+
+    const store = new TaskStore(new Config(repoRoot));
+    await seedTask(store, {
+      id: "FR-001",
+      type: "review",
+      title: "Review",
+      status: "todo",
+      created_at: "2026-01-21T10:00:00+00:00",
+      body: "Body",
+    } as any);
+    await seedTask(store, {
+      id: "FR-002",
+      type: "bug",
+      title: "Bug",
+      status: "todo",
+      created_at: "2026-01-21T11:00:00+00:00",
+      body: "Body",
+    });
+
+    const tool = createTool(repoRoot);
+    const response = await tool.execute({
+      project: "frontend",
+      type: "review",
+    } as any);
+
+    expect(response.ok).toBe(true);
+    if (!response.ok) return;
+
+    expect(response.data.tasks.map((t) => t.id)).toEqual(["FR-001"]);
+    expect(response.data.tasks[0].type).toBe("review");
+  });
 });
 
 describe("TasksList_textSearch_titleAndBody", () => {
