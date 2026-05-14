@@ -1,6 +1,7 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
-import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
+import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/streamableHttp.js";
 import { z } from "zod";
+import { createServer } from "node:http";
 import os from "node:os";
 import path from "node:path";
 import { readdir, readFile, rm, stat, writeFile } from "node:fs/promises";
@@ -1835,5 +1836,67 @@ for (const tool of tools) {
   );
 }
 
-const transport = new StdioServerTransport();
+function parsePort(value) {
+  const port = Number.parseInt(value, 10);
+  if (!Number.isInteger(port) || port < 1 || port > 65535) {
+    throw new Error("Invalid MCP_HTTP_PORT value.");
+  }
+  return port;
+}
+
+const host = process.env.MCP_HTTP_HOST ?? "127.0.0.1";
+const port = parsePort(process.env.MCP_HTTP_PORT ?? process.env.PORT ?? "3000");
+const transport = new StreamableHTTPServerTransport({
+  sessionIdGenerator: undefined,
+});
+
 await server.connect(transport);
+
+const httpServer = createServer(async (request, response) => {
+  const url = new URL(request.url ?? "/", `http://${request.headers.host ?? host}`);
+  if (url.pathname !== "/mcp") {
+    response.writeHead(404, { "content-type": "application/json" });
+    response.end(JSON.stringify({ ok: false, error: { code: "NOT_FOUND", message: "Not found." } }));
+    return;
+  }
+
+  try {
+    await transport.handleRequest(request, response);
+  } catch (error) {
+    console.error("Failed to handle MCP HTTP request.", error);
+    if (!response.headersSent) {
+      response.writeHead(500, { "content-type": "application/json" });
+      response.end(
+        JSON.stringify({
+          jsonrpc: "2.0",
+          error: { code: -32603, message: "Internal server error." },
+          id: null,
+        }),
+      );
+    }
+  }
+});
+
+await new Promise((resolve, reject) => {
+  httpServer.once("error", reject);
+  httpServer.listen(port, host, () => {
+    httpServer.off("error", reject);
+    console.error(`MCP tracker HTTP server listening at http://${host}:${port}/mcp`);
+    resolve();
+  });
+});
+
+async function shutdown() {
+  httpServer.close();
+  await server.close();
+}
+
+process.once("SIGINT", async () => {
+  await shutdown();
+  process.exit(0);
+});
+
+process.once("SIGTERM", async () => {
+  await shutdown();
+  process.exit(0);
+});

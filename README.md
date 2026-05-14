@@ -1,6 +1,6 @@
 # MCP Task Tracker
 
-A minimal Jira-like task tracker exposed as an MCP server (stdio transport).
+Минимальный Jira-подобный трекер задач, опубликованный как MCP-сервер через Streamable HTTP.
 
 Tasks are stored as Markdown files with YAML frontmatter, and every write operation creates a Git commit.
 
@@ -26,7 +26,7 @@ npm test
 
 ## Run
 
-Start the MCP server (stdio):
+Запуск MCP HTTP-сервера:
 
 ```bash
 npm start
@@ -36,6 +36,18 @@ or:
 
 ```bash
 node server.js
+```
+
+По умолчанию сервер слушает:
+
+```text
+http://127.0.0.1:3000/mcp
+```
+
+Адрес привязки и порт настраиваются через переменные окружения:
+
+```bash
+MCP_HTTP_HOST=127.0.0.1 MCP_HTTP_PORT=3000 npm start
 ```
 
 ## CLI
@@ -174,30 +186,13 @@ Notes:
 - `title` is stored as a JSON string (quoted) in frontmatter.
 - `created_at` uses ISO-8601 with UTC offset.
 
-## Using with Codex (MCP)
+## Использование с MCP-клиентами
 
-Add this server to Codex MCP servers:
+Запустите сервер через `npm start`, затем настройте MCP-клиент на Streamable
+HTTP endpoint:
 
-```bash
-codex mcp add mcp-tracker -- node /ABS/PATH/TO/mcp_tracker/server.js
-```
-
-List configured servers:
-
-```bash
-codex mcp list
-```
-
-Inspect a server config:
-
-```bash
-codex mcp get mcp-tracker
-```
-
-Remove the server config:
-
-```bash
-codex mcp remove mcp-tracker
+```text
+http://127.0.0.1:3000/mcp
 ```
 
 ## MCP tools reference
