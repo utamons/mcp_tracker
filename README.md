@@ -1,6 +1,6 @@
 # MCP Task Tracker
 
-Минимальный Jira-подобный трекер задач, опубликованный как MCP-сервер через Streamable HTTP.
+A minimal Jira-like task tracker exposed as an MCP server over Streamable HTTP.
 
 Tasks are stored as Markdown files with YAML frontmatter, and every write operation creates a Git commit.
 
@@ -26,7 +26,7 @@ npm test
 
 ## Run
 
-Запуск MCP HTTP-сервера:
+Start the MCP HTTP server:
 
 ```bash
 npm start
@@ -38,13 +38,13 @@ or:
 node server.js
 ```
 
-По умолчанию сервер слушает:
+By default the server listens on:
 
 ```text
 http://127.0.0.1:3000/mcp
 ```
 
-Адрес привязки и порт настраиваются через переменные окружения:
+The bind address and port can be configured with environment variables:
 
 ```bash
 MCP_HTTP_HOST=127.0.0.1 MCP_HTTP_PORT=3000 npm start
@@ -66,7 +66,7 @@ List tasks for a project:
 npm run tasks:list -- --project <project>
 ```
 
-Output is grouped by `backlog`, `todo`, and `in_progress`, with lines in the form `ID — Title`.
+Output is grouped by `backlog`, `todo`, and `in_progress`, with lines in the form `ID - Title`.
 
 Example:
 
@@ -78,7 +78,7 @@ npm run tasks:list -- --project ta-backend
 backlog:
 todo:
 in_progress:
-TB-065 — Example task title
+TB-065 - Example task title
 ```
 
 Show task details (metadata + body):
@@ -123,7 +123,7 @@ unless the title already contains it. The import accepts `story` as an alias for
 ```md
 ---
 id: DM-XCRT-006
-title: "Зональный трейл `F1/F2/F3`"
+title: "Zone trail `F1/F2/F3`"
 type: story
 ---
 ## Description
@@ -186,10 +186,10 @@ Notes:
 - `title` is stored as a JSON string (quoted) in frontmatter.
 - `created_at` uses ISO-8601 with UTC offset.
 
-## Использование с MCP-клиентами
+## Using with MCP clients
 
-Запустите сервер через `npm start`, затем настройте MCP-клиент на Streamable
-HTTP endpoint:
+Start the server with `npm start`, then configure the MCP client to use the
+Streamable HTTP endpoint:
 
 ```text
 http://127.0.0.1:3000/mcp
